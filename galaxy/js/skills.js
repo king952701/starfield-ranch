@@ -110,6 +110,7 @@ function completeAction() {
   if (!a) { S.action = null; return; }
   const B = bonuses();
   const sk = act.skill;
+  let burned = false; /* 采集/烹饪分支里赋值，函数尾部 addXp 会用到 */
 
   if (a.kind === 'enhance') {
     const sl = a.slot;
@@ -159,7 +160,6 @@ function completeAction() {
     let mult = Math.floor(eff);
     if (Math.random() < (eff % 1)) mult += 1;
     mult += 1;
-    let burned = false;
     if (a.kind === 'cook') {
       const ml = masteryLevel(sk, a.id);
       const burn = Math.max(0, 0.22 - ml * 0.0022 - skillLevel(sk) * 0.0012 - eff * 0.15);
