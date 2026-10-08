@@ -8,9 +8,10 @@ const SAVE_KEY = 'starfield_ranch_v1';
 
 /* ---------- 经验表 ---------- */
 function xpDiff(L) { return Math.floor((L - 1 + 300 * Math.pow(2, (L - 1) / 7)) / 4); }
-const LVL_XP = [0];
+/* 等级 L 的累计经验。下标 1 必须显式置 0，否则整张表从 [2] 起全是 NaN */
+const LVL_XP = [0, 0];
 for (let L = 2; L <= 99; L++) LVL_XP[L] = LVL_XP[L - 1] + xpDiff(L);
-const MST_XP = [0];
+const MST_XP = [0, 0];
 for (let L = 2; L <= 99; L++) MST_XP[L] = MST_XP[L - 1] + Math.max(1, Math.round(xpDiff(L) / 10));
 const XP_CAP = LVL_XP[99];
 
@@ -297,6 +298,7 @@ function wipeSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { } }
 
 /* ---------- 数字格式化 ---------- */
 function fmt(n) {
+  if (typeof n !== 'number' || !isFinite(n)) return '0';
   n = Math.round(n);
   if (Math.abs(n) < 1000) return '' + n;
   const u = ['K', 'M', 'B', 'T', 'Qa', 'Qi'];
