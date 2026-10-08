@@ -45,6 +45,8 @@ const S = {
   tasks: [], lastTask: Date.now(), nextTask: Date.now(),
   guild: null, guildJoinedAt: 0,
   market: { orders: [], refresh: 0, history: [] },
+  /* 拍卖行：listings 为挂单列表，seq 自增 id */
+  ah: { listings: [], seq: 1, refresh: 0 },
   combat: null,
   stats: { kills: 0, deaths: 0, actions: 0, earned: 0, spent: 0, crafted: 0, offline: 0 },
   flags: { tutorial: false },
@@ -75,7 +77,9 @@ function newGame(name) {
   S.stats = { kills: 0, deaths: 0, actions: 0, earned: 0, spent: 0, crafted: 0, offline: 0 };
   S.lastTask = Date.now();
   S.nextTask = Date.now() + 1000 * 60 * 3;
+  S.ah = { listings: [], seq: 1, refresh: 0 };
   refreshMarket(true);
+  ahRefresh(true);
   genTask();
   pushLog('欢迎来到星海牧场，' + S.name + '！');
 }

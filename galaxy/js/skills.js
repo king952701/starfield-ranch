@@ -362,6 +362,185 @@ function fillOrder(oid) {
   UI.dirty = true;
 }
 
+/* ============================================================
+ *  拍卖行（魔兽世界风格）
+ *  - 挂单：起始价 / 一口价 / 拍卖时长 / 押金
+ *  - 竞标：每次至少加价 5%，被超价立即退款
+ *  - 结算：成交退押金，流拍退物品不退押金
+ * ============================================================ */
+const AH_DURS = [
+  { id: 'short', name: '短', hours: 2, mul: 1 },
+  { id: 'med', name: '中', hours: 8, mul: 2 },
+  { id: 'long', name: '长', hours: 24, mul: 3 }
+];
+const AH_NPC = ['银河商人', '牧牛人工会', '星尘杂货', '奶牛爵士', '云端商栈', '牧野行商', '霜刃拍卖师'];
+const AH_LIVE = 16;
+
+function ahDur(id) {
+  for (let i = 0; i < AH_DURS.length; i++) if (AH_DURS[i].id === id) return AH_DURS[i];
+  return AH_DURS[0];
+}
+function ahDeposit(itemId, qty, durMul) {
+  const base = (ITEMS[itemId] ? ITEMS[itemId].price : 10) * qty;
+  return Math.max(1, Math.round(base * 0.05 * durMul));
+}
+function ahMinBid(l) {
+  if (!l || l.done) return 0;
+  return l.bid > 0 ? Math.ceil(l.bid * 1.05) : l.start;
+}
+/* 建议起始价：略低于基准价 */
+function ahSuggest(itemId) {
+  const it = ITEMS[itemId];
+  if (!it) return 1;
+  return Math.max(1, Math.round(it.price * 0.8));
+}
+
+function ahRefresh(force) {
+  if (!S.ah) S.ah = { listings: [], seq: 1, refresh: 0 };
+  if (!S.ah.listings) S.ah.listings = [];
+  if (typeof S.ah.seq !== 'number') S.ah.seq = 1;
+  const now = Date.now();
+  if (!force && now - (S.ah.refresh || 0) < 30 * 60 * 1000) return;
+  S.ah.refresh = now;
+  const pool = ITEM_LIST.filter(function (i) {
+    return i.cat === 'mat' || i.cat === 'food' || i.cat === 'drink' ||
+      (i.cat === 'equip' && i.price < 80000);
+  });
+  if (!pool.length) return;
+  let live = S.ah.listings.filter(function (l) { return !l.mine && !l.done; });
+  let guard = 0;
+  while (live.length < AH_LIVE && guard++ < 80) {
+    const it = pick(pool);
+    const qty = Math.max(1, Math.round(rnd(1, 12)));
+    const dur = pick(AH_DURS);
+    const start = Math.max(1, Math.round(it.price * rnd(0.55, 0.95)));
+    const buyout = Math.random() < 0.72 ? Math.round(start * rnd(1.25, 1.9)) : 0;
+    const bid = Math.random() < 0.32 ? Math.round(start * rnd(1.02, 1.18)) : 0;
+    live.push({
+      id: 'a' + (S.ah.seq++), item: it.id, qty: qty, start: start, buyout: buyout,
+      bid: bid, bidder: bid ? pick(AH_NPC) : null, mine: false, seller: pick(AH_NPC),
+      dur: dur.id, end: now + dur.hours * 3600000 * rnd(0.25, 1), deposit: 0,
+      done: false, result: null
+    });
+  }
+  S.ah.listings = S.ah.listings.filter(function (l) { return l.mine; }).concat(live);
+  UI.dirty = true;
+}
+
+function ahPost(item, qty, start, buyout, durId) {
+  if (!ITEMS[item]) return false;
+  qty = Math.max(1, Math.min(Math.round(qty) || 1, count(item)));
+  if (count(item) < qty) { UI.toast('物品不足'); return false; }
+  const dur = ahDur(durId);
+  start = Math.max(1, Math.round(start));
+  buyout = buyout > 0 ? Math.round(buyout) : 0;
+  if (buyout && buyout <= start) { UI.toast('一口价需高于起始价'); return false; }
+  const dep = ahDeposit(item, qty, dur.mul);
+  if (S.gold < dep) { UI.toast('押金不足（需 ' + fmt(dep) + '）'); return false; }
+  takeItems({ [item]: qty });
+  S.gold -= dep;
+  S.ah.listings.unshift({
+    id: 'a' + (S.ah.seq++), item: item, qty: qty, start: start, buyout: buyout,
+    bid: 0, bidder: null, mine: true, seller: S.name, dur: dur.id,
+    end: Date.now() + dur.hours * 3600000, deposit: dep, done: false, result: null
+  });
+  pushLog('已上架 ' + qty + ' × ' + ITEMS[item].name + '（起始 ' + fmt(start) + '，押金 ' + fmt(dep) + '）');
+  UI.dirty = true;
+  return true;
+}
+
+function ahFind(id) {
+  for (let i = 0; i < S.ah.listings.length; i++) if (S.ah.listings[i].id === id) return S.ah.listings[i];
+  return null;
+}
+
+/* 竞标：立即扣款；若原本就是最高出价者只补差价 */
+function ahBid(id) {
+  const l = ahFind(id);
+  if (!l || l.done || l.mine) return;
+  const price = ahMinBid(l);
+  if (l.buyout && price > l.buyout) { ahBuyout(id); return; }
+  const total = price * l.qty;
+  const refund = (l.bidder === 'me') ? l.bid * l.qty : 0;
+  const need = total - refund;
+  if (S.gold < need) { UI.toast('金币不足（还需 ' + fmt(need) + '）'); return; }
+  S.gold -= need;
+  l.bid = price; l.bidder = 'me';
+  pushLog('竞标 ' + ITEMS[l.item].name + ' ×' + l.qty + ' @ ' + fmt(price) + '/个');
+  UI.dirty = true;
+}
+
+function ahBuyout(id) {
+  const l = ahFind(id);
+  if (!l || l.done || l.mine || !l.buyout) return;
+  const refund = (l.bidder === 'me') ? l.bid * l.qty : 0;
+  const need = l.buyout * l.qty - refund;
+  if (S.gold < need) { UI.toast('金币不足（还需 ' + fmt(need) + '）'); return; }
+  S.gold -= need;
+  addItem(l.item, l.qty);
+  pushLog('一口价购入 ' + l.qty + ' × ' + ITEMS[l.item].name + '，-' + fmt(l.buyout * l.qty) + ' 金币');
+  l.done = true; l.result = 'sold'; l.bidder = 'me';
+  UI.dirty = true;
+}
+
+function ahCancel(id) {
+  const l = ahFind(id);
+  if (!l || !l.mine || l.done) return;
+  if (l.bidder) { UI.toast('已有人出价，无法取消'); return; }
+  addItem(l.item, l.qty);
+  l.done = true; l.result = 'cancel';
+  pushLog('取消拍卖：' + l.qty + ' × ' + ITEMS[l.item].name + ' 已退回');
+  UI.dirty = true;
+}
+
+/* 每秒调用：处理 NPC 竞争与到期结算 */
+function ahTick() {
+  if (!S.ah || !S.ah.listings) return;
+  const now = Date.now();
+  let changed = false;
+  for (let i = 0; i < S.ah.listings.length; i++) {
+    const l = S.ah.listings[i];
+    if (!l || l.done) continue;
+    /* 玩家领先时，NPC 有概率超价（营造竞价感） */
+    if (l.bidder === 'me' && Math.random() < 0.004) {
+      const nb = Math.ceil(l.bid * 1.05);
+      if (!l.buyout || nb < l.buyout) {
+        addGold(l.bid * l.qty);
+        l.bid = nb; l.bidder = pick(AH_NPC);
+        pushLog('⚔ ' + l.bidder + ' 把 ' + ITEMS[l.item].name + ' 抬到 ' + fmt(nb) + '/个');
+        changed = true;
+        continue;
+      }
+    }
+    if (now >= l.end) {
+      l.done = true;
+      if (l.mine) {
+        if (l.bidder) {
+          addGold(l.bid * l.qty + l.deposit);
+          l.result = 'sold';
+          pushLog('💰 拍卖成交：' + l.qty + ' × ' + ITEMS[l.item].name + ' 售出 ' + fmt(l.bid * l.qty) + ' 金币');
+        } else {
+          addItem(l.item, l.qty);
+          l.result = 'expired';
+          pushLog('⏳ 流拍：' + l.qty + ' × ' + ITEMS[l.item].name + ' 退回（押金 ' + fmt(l.deposit) + ' 不退）');
+        }
+      } else if (l.bidder === 'me') {
+        addItem(l.item, l.qty);
+        l.result = 'won';
+        pushLog('🏆 竞拍获胜：获得 ' + l.qty + ' × ' + ITEMS[l.item].name + '（' + fmt(l.bid * l.qty) + ' 金币）');
+      } else {
+        l.result = 'gone';
+      }
+      changed = true;
+    }
+  }
+  if (changed) {
+    S.ah.listings = S.ah.listings.filter(function (l) { return l.mine || !l.done; });
+    UI.dirty = true;
+  }
+  ahRefresh(false);
+}
+
 /* ---------- 牧场建筑 ---------- */
 function houseUpgrade(id) {
   const h = HOUSES.filter(function (x) { return x.id === id; })[0];

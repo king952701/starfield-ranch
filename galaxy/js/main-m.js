@@ -111,6 +111,7 @@ var MGame = {
       MGame.slowT = 0;
       tickTasks();
       refreshMarket(false);
+      ahTick();          /* 拍卖行：竞价与到期结算 */
       MGame.chatT++;
       if (MGame.chatT >= 12) { MGame.chatT = 0; MGame.pushChat(); MUI.dirty = true; }
       MGame.saveT++;
