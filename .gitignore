@@ -1,0 +1,17 @@
+# 本地工具链（JDK + Gradle + Android SDK，约 320MB~1GB，不要上传）
+.toolchain/
+
+# 构建产物
+android/build/
+android/app/build/
+android/.gradle/
+*.apk
+*.aab
+
+# 本机 SDK 路径（会覆盖 CI 的 ANDROID_HOME，导致云端构建失败）
+android/local.properties
+
+# 系统/编辑器
+.DS_Store
+Thumbs.db
+*.log

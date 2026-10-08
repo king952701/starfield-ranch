@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>星海牧场 · 银河放置传说</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b1020'/%3E%3Ctext x='32' y='46' font-size='38' text-anchor='middle'%3E%F0%9F%90%84%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+<script>
+/* 手机访问自动跳转手机版（加 ?nomobile=1 可强制留在桌面版） */
+(function () {
+  try {
+    var ua = navigator.userAgent || '';
+    var isM = /(iPhone|iPad|iPod|Android|Windows Phone|webOS|BlackBerry|Mobile)/i.test(ua);
+    if (isM && !/nomobile=1/i.test(location.search)) location.replace('m.html');
+  } catch (e) { }
+})();
+</script>
+</head>
+<body>
+<div id="app">
+  <header id="top">
+    <div class="logo">🐄 星海牧场<span>银河放置传说</span></div>
+    <a class="ts mobilelink" href="m.html">📱 手机版</a>
+    <div id="topstats"></div>
+  </header>
+
+  <aside id="left">
+    <div class="aside-t">技能</div>
+    <div id="skilllist"></div>
+    <div class="aside-t">日志</div>
+    <div id="minilog"></div>
+  </aside>
+
+  <main id="center">
+    <nav id="tabs"></nav>
+    <div id="panel"></div>
+  </main>
+
+  <aside id="right">
+    <div class="aside-t">角色</div>
+    <div id="charcard"></div>
+  </aside>
+
+  <footer id="bottom">
+    <div id="queuebar"></div>
+  </footer>
+</div>
+
+<div id="toasts"></div>
+<div id="modalwrap"></div>
+
+<script src="js/data.js"></script>
+<script src="js/data2.js"></script>
+<script src="js/core.js"></script>
+<script src="js/skills.js"></script>
+<script src="js/combat.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/ui2.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
