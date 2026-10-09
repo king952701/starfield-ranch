@@ -40,7 +40,7 @@ var MGame = {
       '<div class="fr"><label>服务器</label><select id="pserver">' +
       ['星海一区', '星海二区', '银河新区', '沐莓小镇'].map(function (s) { return '<option>' + s + '</option>'; }).join('') +
       '</select></div>' +
-      '<div class="tips">底部选「技能」→ 点动作右侧 +1 / +10 / ∞ 加入队列。<br>' +
+      '<div class="tips">左侧选「技能」→ 用 +1 / +10 / ∞ 排活，或用「置顶队列」「加入队列 #N」安排顺序。<br>' +
       '「战斗」可挂机刷材料装备；「专精」注入池经验获得强力加成。<br>' +
       '关掉页面也会继续生产，回来自动结算离线收益。</div>' + warn +
       '<button class="big" id="btnstart">进入星海</button></div>';

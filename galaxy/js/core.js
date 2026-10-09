@@ -73,6 +73,7 @@ function newGame(name) {
   S.tasks = []; S.shop = {}; S.bell = {}; S.buffs = []; S.chat = [];
   S.combat = null; S.action = null;
   S.queue = [];
+  S.queueSlots = Q_SLOT_DEFAULT;
   S.houses = {}; HOUSES.forEach(function (h) { S.houses[h.id] = 0; });
   S.stats = { kills: 0, deaths: 0, actions: 0, earned: 0, spent: 0, crafted: 0, offline: 0 };
   S.lastTask = Date.now();
@@ -338,6 +339,35 @@ const BAG_CATS = [
   { id: 'amulet', name: '护符', ic: '📿' }
 ];
 
+/* ============================================================
+ *  工作队列槽位
+ *  初始 3 格，最多 8 格；解锁要同时消耗金币与物资，
+ *  把过剩产出回收成"进度"，拉长养成周期。
+ * ============================================================ */
+const Q_SLOT_DEFAULT = 3;
+const Q_SLOT_MAX = 8;
+/* 下标 i 对应「解锁到第 (Q_SLOT_DEFAULT + 1 + i) 格」的成本 */
+const Q_SLOT_COST = [
+  { gold: 3000, items: { cream: 15, bamboo_cloth: 3 } },
+  { gold: 20000, items: { herb: 30, essence: 5 } },
+  { gold: 120000, items: { silk_cloth: 6, gem: 8 } },
+  { gold: 700000, items: { essence: 30, nova_cloth: 3 } },
+  { gold: 4000000, items: { gem: 40, nova_cloth: 8 } }
+];
+
+function queueSlots() {
+  return (typeof S.queueSlots === 'number' && S.queueSlots > 0) ? S.queueSlots : Q_SLOT_DEFAULT;
+}
+/* 下一个可解锁的槽位信息（已满则返回 null） */
+function queueNextSlot() {
+  var cur = queueSlots();
+  if (cur >= Q_SLOT_MAX) return null;
+  var idx = cur - Q_SLOT_DEFAULT;
+  if (idx < 0) idx = 0;
+  if (idx >= Q_SLOT_COST.length) return null;
+  return { slot: cur + 1, cost: Q_SLOT_COST[idx] };
+}
+
 function saveGame() {
   S.savedAt = Date.now();
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { }
@@ -355,6 +385,8 @@ function loadGame() {
       if (S.pool[s.id] == null) S.pool[s.id] = 0;
     });
     COMBAT_SUBS.forEach(function (c) { if (S.subs[c.id] == null) S.subs[c.id] = 0; });
+    if (typeof S.queueSlots !== 'number') S.queueSlots = Q_SLOT_DEFAULT;   /* 老存档迁移 */
+    if (!S.queue) S.queue = [];
     if (!S.stats) S.stats = { kills: 0, deaths: 0, actions: 0, earned: 0, spent: 0, crafted: 0, offline: 0 };
     return true;
   } catch (e) { return false; }

@@ -30,7 +30,7 @@ var MUI = {
   ahDays: 7,             /* 行情周期天数 */
 
   TABS: [
-    ['skill', '技能', '🧺'], ['combat', '战斗', '⚔️'], ['bag', '背包', '🎒'],
+    ['skill', '技能', '🧺'], ['queue', '队列', '⏳'], ['combat', '战斗', '⚔️'], ['bag', '背包', '🎒'],
     ['equip', '装备', '🛡️'], ['mastery', '专精', '✦'], ['task', '任务', '📜'],
     ['market', '拍卖', '🏪'], ['vendor', '商人', '💱'], ['house', '牧场', '🏠'],
     ['social', '社交', '🌐'], ['stats', '统计', '📊']
@@ -290,6 +290,26 @@ var MUI = {
     else if (a === 'queue') { queueAction(x, y, z === 'inf' ? -1 : parseInt(z || '1', 10)); }
     else if (a === 'clearq') { clearQueue(); }
     else if (a === 'qdrop') { S.queue.splice(parseInt(x, 10), 1); MUI.dirty = true; }
+    /* ---- 工作队列增强 ---- */
+    else if (a === 'qjump') { MUI.tab = 'queue'; MUI.dirty = true; MUI.scrollTop(); }
+    else if (a === 'qtop') { queueTop(x, y, 1); }
+    else if (a === 'qins') {
+      var qsel = document.getElementById('qpos_' + x + '_' + y);
+      queueInsert(x, y, 1, qsel ? parseInt(qsel.value, 10) : 1);
+    }
+    else if (a === 'qpin') {          /* 队列面板里把第 i 项提到最前 */
+      var pi = parseInt(x, 10);
+      if (pi > 0 && S.queue[pi]) {
+        var mv = S.queue.splice(pi, 1)[0];
+        S.queue.unshift(mv);
+        if (S.action) { S.action = null; tryStart(); }
+        MUI.dirty = true;
+        MUI.toast('已提到第 1 格');
+      } else { MUI.toast('已经在最前面了'); }
+    }
+    else if (a === 'qup') { queueMove(parseInt(x, 10), -1); }
+    else if (a === 'qdown') { queueMove(parseInt(x, 10), 1); }
+    else if (a === 'qunlock') { queueUnlock(); }
     else if (a === 'combat-start') { if (!S.combat || !S.combat.active) Combat.start(x); else Combat.stop(); }
     else if (a === 'combat-stop') { Combat.stop(); }
     else if (a === 'heal') { Combat.healFull(); }
@@ -556,20 +576,23 @@ var MUI = {
     document.getElementById('mtab').innerHTML = h;
   },
 
+  /* 顶部常驻紧凑队列条（点击整条进入队列面板） */
   renderQueue: function () {
-    var h = '';
+    var used = S.queue.length, cap = queueSlots();
+    var h = '<div class="mq-row" data-act="qjump">';
     if (S.action) {
       var a = ACTION_MAP[S.action.skill + ':' + S.action.actId];
       var pct = Math.min(1, S.action.t / S.action.dur);
       h += '<span class="mq-ic">' + (a.icon || '⏳') + '</span>';
       h += '<span class="mq-mid"><div class="mq-nm">' + a.name + '</div>' +
-        '<div class="mq-bar"><i id="mbar" style="width:' + (pct * 100).toFixed(1) + '%"></i></div>' +
-        '<div class="mq-sub">队列 ' + S.queue.length + ' 项</div></span>';
+        '<div class="mq-bar"><i id="mbar" style="width:' + (pct * 100).toFixed(1) + '%"></i></div></span>';
       h += '<span class="mq-t" id="mtime">' + (S.action.dur - S.action.t).toFixed(1) + 's</span>';
-      if (S.queue.length) h += '<button class="mini red" data-act="clearq" style="margin-left:8px">清</button>';
     } else {
-      h += '<span class="mq-idle">💤 空闲中 —— 去「技能」选个动作开始生产</span>';
+      h += '<span class="mq-ic">💤</span>';
+      h += '<span class="mq-mid"><div class="mq-idle">空闲中 · 点此管理队列</div></span>';
     }
+    h += '<span class="mq-cap' + (used >= cap ? ' full' : '') + '">' + used + '/' + cap + '</span>';
+    h += '</div>';
     document.getElementById('mqueue').innerHTML = h;
   },
 
@@ -587,6 +610,7 @@ var MUI = {
   panel: function () {
     var t = MUI.tab;
     if (t === 'skill') return MUI.pSkill();
+    if (t === 'queue') return MUI.pQueue();
     if (t === 'combat') return MUI.pCombat();
     if (t === 'bag') return MUI.pBag();
     if (t === 'equip') return MUI.pEquip();
@@ -718,7 +742,109 @@ var MUI = {
       '<button data-act="queue" data-a="' + sk + '" data-b="' + a.id + '" data-c="1">+1</button>' +
       '<button data-act="queue" data-a="' + sk + '" data-b="' + a.id + '" data-c="10">+10</button>' +
       '<button class="gold" data-act="queue" data-a="' + sk + '" data-b="' + a.id + '" data-c="inf">∞ 连续</button>' +
-      '</div></div>';
+      '</div>';
+    /* 置顶 / 加入指定队列格 */
+    h += '<div class="ab4">' +
+      '<button class="mini pin" data-act="qtop" data-a="' + sk + '" data-b="' + a.id + '">⤒ 置顶队列</button>' +
+      '<span class="qjoin">' +
+      '<select class="qsel" id="qpos_' + sk + '_' + a.id + '">' + MUI.queueOpts() + '</select>' +
+      '<button class="mini" data-act="qins" data-a="' + sk + '" data-b="' + a.id + '">加入</button>' +
+      '</span></div></div>';
+    return h;
+  },
+  /* 队列格下拉框：默认选中下一个空格 */
+  queueOpts: function () {
+    var cap = queueSlots(), used = S.queue.length;
+    var sel = used + 1;
+    if (sel > cap) sel = cap;
+    var o = '';
+    for (var i = 1; i <= cap; i++) {
+      o += '<option value="' + i + '"' + (i === sel ? ' selected' : '') + '>' +
+        (i === 1 ? '队列 #1（优先）' : '队列 #' + i) + '</option>';
+    }
+    return o;
+  },
+
+  /* -------- 工作队列面板 -------- */
+  pQueue: function () {
+    var i, cap = queueSlots(), used = S.queue.length;
+    var h = '';
+
+    /* 概览 */
+    h += '<div class="card"><div class="skhd">' +
+      '<span class="ic">⏳</span><span><div class="nm">工作队列</div>' +
+      '<div class="ds">当前占用 ' + used + ' / ' + cap + ' 格 · 上限 ' + Q_SLOT_MAX + ' 格</div></span>' +
+      '<span class="lv">' + (S.action ? '运行中' : '空闲') + '</span></div>';
+
+    /* 槽位指示灯 */
+    h += '<div class="qslots">';
+    for (i = 1; i <= Q_SLOT_MAX; i++) {
+      var cls = i <= used ? 'full' : (i <= cap ? 'open' : 'lock');
+      h += '<i class="qs ' + cls + '">' + i + '</i>';
+    }
+    h += '</div>';
+
+    if (S.action) {
+      var ac = ACTION_MAP[S.action.skill + ':' + S.action.actId];
+      if (ac) {
+        var pc = Math.min(1, S.action.t / S.action.dur);
+        h += '<div class="qmnow">正在执行：<b>' + ac.icon + ac.name + '</b>　剩余 ' +
+          (S.action.dur - S.action.t).toFixed(1) + 's' +
+          '<div class="mq-bar"><i style="width:' + (pc * 100).toFixed(1) + '%"></i></div></div>';
+      }
+    }
+    h += '<div style="margin-top:6px"><button class="mini red" data-act="clearq">清空队列</button></div>';
+    h += '</div>';
+
+    /* 队列明细 */
+    h += '<div class="hd"><h3>队列明细（第 1 格优先执行）</h3></div>';
+    if (!S.queue.length) {
+      h += '<div class="card dim">队列是空的 —— 到「技能」面板点 +1 / 置顶 / 加入队列排活。</div>';
+    }
+    for (i = 0; i < S.queue.length; i++) {
+      var q = S.queue[i];
+      var qa = ACTION_MAP[q.skill + ':' + q.actId];
+      if (!qa) continue;
+      h += '<div class="ahrow qrow">' +
+        '<span class="ahic">' + (qa.icon || '⏳') + '</span>' +
+        '<span class="ahmid"><div class="ahn"><b class="qb2">#' + (i + 1) + '</b> ' + qa.name +
+        '<em>' + (q.n === -1 ? '∞ 连续' : '×' + q.n) + '</em></div>' +
+        '<div class="ahp">' + SKILL_MAP[q.skill].name + ' ｜ 单次 ' + actionTime(q.skill, qa).toFixed(1) + 's ｜ ★' + fmt(qa.xp) + '</div></span>' +
+        '<span class="ahbt">' +
+        (i > 0 ? '<button class="mini" data-act="qup" data-a="' + i + '">↑</button>' : '') +
+        (i < S.queue.length - 1 ? '<button class="mini" data-act="qdown" data-a="' + i + '">↓</button>' : '') +
+        (i > 0 ? '<button class="mini" data-act="qpin" data-a="' + i + '">置顶</button>' : '') +
+        '<button class="mini red" data-act="qdrop" data-a="' + i + '">✕</button>' +
+        '</span></div>';
+    }
+
+    /* 扩充槽位 */
+    var nx = queueNextSlot();
+    h += '<div class="hd"><h3>扩充队列槽位</h3></div><div class="card">';
+    if (!nx) {
+      h += '<div class="dim">已解锁到上限 ' + Q_SLOT_MAX + ' 格。</div>';
+    } else {
+      var lackAll = S.gold < nx.cost.gold;
+      for (var kk in nx.cost.items) {
+        if (!ITEMS[kk]) continue;
+        if (count(kk) < nx.cost.items[kk]) lackAll = true;
+      }
+      h += '<div>解锁<b>第 ' + nx.slot + ' 格</b>需要：</div>';
+      h += '<div class="chips2"><span class="chip' + (S.gold < nx.cost.gold ? ' lack' : '') + '">💰金币 <b>' +
+        fmt(nx.cost.gold) + '</b>（持有 ' + fmt(S.gold) + '）</span>';
+      for (var k2 in nx.cost.items) {
+        if (!ITEMS[k2]) continue;
+        var hv = count(k2), nd = nx.cost.items[k2];
+        h += '<span class="chip' + (hv < nd ? ' lack' : '') + '">' + ITEMS[k2].icon + ITEMS[k2].name +
+          ' <b>' + fmt(hv) + '/' + fmt(nd) + '</b></span>';
+      }
+      h += '</div>';
+      h += '<button class="wide ' + (lackAll ? '' : 'gold') + '" data-act="qunlock">' +
+        (lackAll ? '材料不足，无法解锁' : '解锁第 ' + nx.slot + ' 格') + '</button>';
+    }
+    h += '<div class="dim" style="margin-top:6px">槽位越多越省手：离线挂机和长链条生产都需要更多格子。' +
+      '解锁消耗金币与物资，是过剩产出的主要去处。</div>';
+    h += '</div>';
     return h;
   },
 

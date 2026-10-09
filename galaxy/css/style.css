@@ -119,6 +119,10 @@ body{
 .qitem em{color:var(--gold);font-style:normal;margin-left:4px}
 .qclear{margin-left:auto;background:#2a1620;border:1px solid #5a2a35;color:#f08a8a;
   border-radius:7px;padding:4px 10px;font-size:11px;cursor:pointer;flex:0 0 auto}
+/* 队列槽位扩展入口 */
+.qcap{font-size:11px;color:var(--dim);padding:3px 0 1px}
+.qunlock{font-size:11px;color:var(--gold);cursor:pointer;padding:3px 0}
+.qunlock:hover{text-decoration:underline}
 
 /* ---------- 面板头 ---------- */
 .ph{display:flex;gap:12px;align-items:center;background:linear-gradient(90deg,#141c3a,#0d1226);

@@ -26,6 +26,10 @@ const UI = {
       case 'queue': queueAction(x, y, z === 'inf' ? -1 : parseInt(z || '1', 10)); break;
       case 'clearq': clearQueue(); break;
       case 'qdrop': S.queue.splice(parseInt(x, 10), 1); UI.dirty = true; break;
+      case 'qunlock': queueUnlock(); break;
+      case 'qpin': { const pi = parseInt(x, 10); if (pi > 0 && S.queue[pi]) { const mv = S.queue.splice(pi, 1)[0]; S.queue.unshift(mv); if (S.action) { S.action = null; tryStart(); } UI.dirty = true; } break; }
+      case 'qup': queueMove(parseInt(x, 10), -1); break;
+      case 'qdown': queueMove(parseInt(x, 10), 1); break;
       case 'combat-start':
         if (!S.combat || !S.combat.active) Combat.start(x); else Combat.stop();
         break;
@@ -266,6 +270,16 @@ const UI = {
         '<em>' + (q.n === -1 ? '∞' : '×' + q.n) + '</em></div>';
     });
     h += '</div>';
+    const nx = queueNextSlot();
+    h += '<div class="qcap">队列 ' + S.queue.length + ' / ' + queueSlots() + '</div>';
+    if (nx) {
+      let lackTxt = S.gold < nx.cost.gold ? '（金币不足）' : '';
+      for (const k in nx.cost.items) {
+        if (ITEMS[k] && count(k) < nx.cost.items[k]) lackTxt = '（材料不足）';
+      }
+      h += '<div class="qunlock" data-act="qunlock">🔓 解锁第 ' + nx.slot + ' 格 · 💰' +
+        fmt(nx.cost.gold) + lackTxt + '</div>';
+    }
     if (S.queue.length) h += '<div class="qclear" data-act="clearq">清空队列</div>';
     el.innerHTML = h;
   },

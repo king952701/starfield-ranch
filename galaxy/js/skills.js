@@ -69,11 +69,91 @@ function queueAction(skill, actId, n) {
   const a = ACTION_MAP[skill + ':' + actId];
   if (!a) return;
   if (skillLevel(skill) < a.lvl) { UI.toast('需要 ' + SKILL_MAP[skill].name + ' ' + a.lvl + ' 级'); return; }
+  if (S.queue.length >= queueSlots()) {
+    UI.toast('队列已满（' + queueSlots() + '/' + Q_SLOT_MAX + '）—— 去「队列」面板解锁更多槽位');
+    return;
+  }
   const last = S.queue[S.queue.length - 1];
   if (last && last.skill === skill && last.actId === actId && last.n > 0 && n > 0) { last.n += n; }
   else S.queue.push({ skill: skill, actId: actId, n: n == null ? 1 : n });
   if (!S.action) tryStart();
   UI.dirty = true;
+}
+
+/* ---------- 工作队列：置顶 / 插入指定槽位 / 上下移动 / 解锁 ---------- */
+function mkQ(skill, actId, n) { return { skill: skill, actId: actId, n: n == null ? 1 : n }; }
+
+/* 置顶：立即中断当前动作，把该动作插到队首马上开工 */
+function queueTop(skill, actId, n) {
+  const a = ACTION_MAP[skill + ':' + actId];
+  if (!a) return;
+  if (skillLevel(skill) < a.lvl) { UI.toast('需要 ' + SKILL_MAP[skill].name + ' ' + a.lvl + ' 级'); return; }
+  let stoppedInf = false;
+  /* 队首若是 ∞ 项，先摘掉，否则新项永远排不到它前面 */
+  if (S.queue.length && S.queue[0].n === -1 &&
+      !(S.queue[0].skill === skill && S.queue[0].actId === actId)) {
+    S.queue.shift();
+    stoppedInf = true;
+  }
+  S.action = null;
+  S.queue.unshift(mkQ(skill, actId, n));
+  /* 超出槽位上限时挤掉队尾 */
+  while (S.queue.length > queueSlots()) S.queue.pop();
+  tryStart();
+  UI.dirty = true;
+  UI.toast(stoppedInf ? ('已置顶「' + a.name + '」，并停止原来的 ∞ 连续') : ('已置顶「' + a.name + '」'));
+}
+
+/* 插入到第 pos 个槽位（1 起），超出队列长度则排到末尾 */
+function queueInsert(skill, actId, n, pos) {
+  const a = ACTION_MAP[skill + ':' + actId];
+  if (!a) return;
+  if (skillLevel(skill) < a.lvl) { UI.toast('需要 ' + SKILL_MAP[skill].name + ' ' + a.lvl + ' 级'); return; }
+  if (S.queue.length >= queueSlots()) {
+    UI.toast('队列已满（' + queueSlots() + '/' + Q_SLOT_MAX + '）');
+    return;
+  }
+  let p = Math.round(pos) || 1;
+  if (p < 1) p = 1;
+  if (p > S.queue.length + 1) p = S.queue.length + 1;
+  S.queue.splice(p - 1, 0, mkQ(skill, actId, n));
+  while (S.queue.length > queueSlots()) S.queue.pop();
+  if (!S.action) tryStart();
+  UI.dirty = true;
+  UI.toast('「' + a.name + '」已加入队列 #' + p);
+}
+
+/* 队列内上下移动：dir = -1 上移 / +1 下移 */
+function queueMove(i, dir) {
+  const j = i + dir;
+  if (i < 0 || j < 0 || i >= S.queue.length || j >= S.queue.length) return;
+  const t = S.queue[i];
+  S.queue[i] = S.queue[j];
+  S.queue[j] = t;
+  /* 动了队首且当前正在执行：立刻切换到新的队首 */
+  if ((i === 0 || j === 0) && S.action) { S.action = null; tryStart(); }
+  UI.dirty = true;
+}
+
+/* 解锁下一个队列槽位 */
+function queueUnlock() {
+  const nx = queueNextSlot();
+  if (!nx) { UI.toast('队列槽位已达上限 ' + Q_SLOT_MAX); return false; }
+  const c = nx.cost;
+  const lack = [];
+  for (const k in c.items) {
+    if (!ITEMS[k]) continue;
+    if (count(k) < c.items[k]) lack.push(ITEMS[k].name + '×' + c.items[k]);
+  }
+  if (S.gold < c.gold) lack.push('金币 ' + fmt(c.gold));
+  if (lack.length) { UI.toast('材料不足：' + lack.join('、')); return false; }
+  addGold(-c.gold);
+  takeItems(c.items);
+  S.queueSlots = nx.slot;
+  pushLog('⚙ 工作队列扩充到第 ' + nx.slot + ' 格');
+  UI.dirty = true;
+  UI.toast('队列已扩充到 ' + nx.slot + ' 格！');
+  return true;
 }
 
 function clearQueue() { S.queue = []; S.action = null; UI.dirty = true; }

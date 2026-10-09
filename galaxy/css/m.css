@@ -116,23 +116,38 @@ body {
 }
 #mbody::-webkit-scrollbar { width: 0; }
 
-/* ---------- 底部动作队列 ---------- */
+/* ---------- 顶部常驻紧凑队列条 ---------- */
 #mqueue {
-  -webkit-flex: 0 0 52px;
-  flex: 0 0 52px;
-  height: 52px;
+  -webkit-flex: 0 0 30px;
+  flex: 0 0 30px;
+  height: 30px;
+  overflow: hidden;
+  padding: 0 8px;
+  background: -webkit-linear-gradient(#161f42, #0e1428);
+  background: linear-gradient(#161f42, #0e1428);
+  border-bottom: 1px solid #232c50;
+}
+.mq-row {
   display: -webkit-box;
   display: -webkit-flex;
   display: flex;
   -webkit-box-align: center;
   -webkit-align-items: center;
   align-items: center;
-  padding: 0 10px;
-  background: -webkit-linear-gradient(#111731, #0b1020);
-  background: linear-gradient(#111731, #0b1020);
-  border-top: 1px solid #232c50;
-  overflow: hidden;
+  height: 30px;
 }
+.mq-cap {
+  -webkit-flex: 0 0 auto;
+  flex: 0 0 auto;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border: 1px solid #2f3a68;
+  border-radius: 8px;
+  font-size: 10px;
+  color: #8892b8;
+  font-family: Georgia, serif;
+}
+.mq-cap.full { color: #f0645f; border-color: #5a2a30; }
 .mq-ic { font-size: 22px; margin-right: 8px; -webkit-flex: 0 0 auto; flex: 0 0 auto; }
 .mq-mid { -webkit-box-flex: 1; -webkit-flex: 1 1 auto; flex: 1 1 auto; min-width: 0; }
 .mq-nm { font-size: 12px; color: #dbe2f5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -152,8 +167,91 @@ body {
   background: -webkit-linear-gradient(left, #2f6ea8, #6cc2f5);
   background: linear-gradient(90deg, #2f6ea8, #6cc2f5);
 }
-.mq-t { font-family: Georgia, serif; color: #f2c14e; font-size: 13px; margin-left: 8px; -webkit-flex: 0 0 auto; flex: 0 0 auto; }
-.mq-idle { font-size: 12px; color: #6f7ba3; }
+.mq-t { font-family: Georgia, serif; color: #f2c14e; font-size: 11px; margin-left: 6px; -webkit-flex: 0 0 auto; flex: 0 0 auto; }
+.mq-idle { font-size: 11px; color: #6f7ba3; }
+.mq-nm { font-size: 11px; }
+.mq-bar { margin-top: 2px; height: 4px; }
+.mq-ic { font-size: 16px; margin-right: 6px; }
+
+/* ---------- 队列工位面板 ---------- */
+.qslots { display: block; margin: 8px 0 4px; white-space: normal; }
+.qs {
+  display: inline-block;
+  width: 26px;
+  height: 22px;
+  line-height: 22px;
+  margin: 0 4px 4px 0;
+  text-align: center;
+  font-style: normal;
+  font-size: 11px;
+  font-family: Georgia, serif;
+  border: 1px solid #232c50;
+  border-radius: 6px;
+  background: #0b1020;
+  color: #5a6488;
+}
+.qs.full { border-color: #6cc2f5; background: #132444; color: #9fd6ff; }
+.qs.open { border-color: #3c4a80; color: #8892b8; }
+.qs.lock { opacity: .5; }
+.qmnow { font-size: 11px; color: #8892b8; margin-top: 6px; }
+.qmnow b { color: #dbe2f5; }
+.qrow .qb2 {
+  display: inline-block;
+  padding: 0 5px;
+  margin-right: 4px;
+  border-radius: 6px;
+  background: #26315c;
+  color: #9fd6ff;
+  font-size: 10px;
+  font-family: Georgia, serif;
+}
+.qrow .ahbt button { margin-bottom: 3px; }
+.chip.lack { border-color: #5a2a30; color: #f0645f; }
+.chip.lack b { color: #f0645f; }
+
+/* ---------- 动作行：置顶 / 加入指定队列格 ---------- */
+.ab4 {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-box-align: center;
+  -webkit-align-items: center;
+  align-items: center;
+  margin-top: 6px;
+}
+.ab4 .pin { -webkit-flex: 0 0 auto; flex: 0 0 auto; }
+.qjoin {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-box-flex: 1;
+  -webkit-flex: 1 1 auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-left: 6px;
+}
+.qjoin .qsel {
+  -webkit-box-flex: 1;
+  -webkit-flex: 1 1 auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 30px;
+  padding: 0 4px;
+  background: #0d132a;
+  color: #dbe2f5;
+  border: 1px solid #232c50;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 11px;
+}
+.qjoin button {
+  -webkit-flex: 0 0 auto;
+  flex: 0 0 auto;
+  margin-left: 5px;
+  min-height: 30px;
+  padding: 0 8px;
+  white-space: nowrap;
+}
 
 /* ---------- 左侧导航（竖向滚动 + 收纳/展开） ---------- */
 #mtab {
