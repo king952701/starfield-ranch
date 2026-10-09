@@ -847,7 +847,19 @@ function runOffline(sec) {
   sec = Math.min(sec, offlineCapSec());
   if (sec < 30) return null;
   const res = { sec: sec, acts: 0, gold: 0, kills: 0, xp: {}, laps: 0 };
+
+  /* 结算前的快照：用来算清这段时间到底攒了什么 */
   const g0 = S.gold;
+  const b0 = {}; for (const k in S.bank) b0[k] = S.bank[k];
+  const lv0 = {}, xp0 = {};
+  SKILLS.forEach(function (s) {
+    if (s.id === 'combat') return;
+    lv0[s.id] = skillLevel(s.id);
+    xp0[s.id] = S.skills[s.id] || 0;
+  });
+  const k0 = (S.stats && S.stats.kills) || 0;
+  const d0 = (S.stats && S.stats.deaths) || 0;
+
   let guard = 20000;
   let left = sec;
   /* 技能：解析式快进 */
@@ -869,8 +881,36 @@ function runOffline(sec) {
       csec -= step;
       if (!S.combat || !S.combat.active) break;
     }
-    res.kills = 1;
   }
+  res.combat = !!(S.combat && S.combat.active);
+  res.kills = ((S.stats && S.stats.kills) || 0) - k0;
+  res.deaths = ((S.stats && S.stats.deaths) || 0) - d0;
+
+  /* 技能：经验增量与升级记录 */
+  res.xp = {}; res.lvups = [];
+  SKILLS.forEach(function (s) {
+    if (s.id === 'combat') return;
+    const d = (S.skills[s.id] || 0) - (xp0[s.id] || 0);
+    if (d > 0) res.xp[s.id] = d;
+    const lv = skillLevel(s.id);
+    if (lv > lv0[s.id]) res.lvups.push({ id: s.id, from: lv0[s.id], to: lv });
+  });
+
+  /* 物资：按「数量 × 单价」从高到低取前 6 件 */
+  const deltas = [];
+  for (const k in S.bank) {
+    const d = S.bank[k] - (b0[k] || 0);
+    if (d <= 0) continue;
+    const it = ITEMS[k];
+    deltas.push({
+      id: k, n: d, icon: it ? it.icon : '📦', name: it ? it.name : k,
+      val: d * (it && it.price ? it.price : 1)
+    });
+  }
+  deltas.sort(function (a, b) { return b.val - a.val; });
+  res.items = deltas.slice(0, 6);
+  res.itemKinds = deltas.length;
+
   S.stats.offline += sec;
   return res;
 }

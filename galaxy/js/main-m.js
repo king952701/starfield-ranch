@@ -59,15 +59,61 @@ var MGame = {
   /* ---------------- 离线结算 ---------------- */
   showOffline: function (res) {
     var w = document.getElementById('mmodal');
-    w.innerHTML = '<div class="mbox">' +
+    var h = '<div class="mbox">' +
       '<h2>🌙 离线结算</h2>' +
       '<div class="sub">你离开了 ' + fmtTime(res.sec) + '（上限 ' + bonuses().offline + ' 小时）</div>' +
       '<div class="og">' +
       '<div><s>完成动作</s><b>' + fmt(res.acts) + '</b></div>' +
       '<div><s>获得金币</s><b>' + fmt(res.gold) + '</b></div>' +
-      '<div><s>战斗</s><b>' + (res.kills ? '继续' : '未开启') + '</b></div>' +
-      '</div>' +
-      '<button class="big" id="btnok">继续冒险</button></div>';
+      '<div><s>战斗</s><b>' + (res.combat ? (fmt(res.kills) + ' 只') : '未开启') + '</b></div>' +
+      '</div>';
+
+    /* 这段时间攒下的物资 */
+    if (res.items && res.items.length) {
+      h += '<div class="off-h">🧺 获得的物资' +
+        (res.itemKinds > res.items.length ? '<em>共 ' + res.itemKinds + ' 种，显示价值最高的 ' + res.items.length + ' 件</em>' : '') +
+        '</div><div class="offitems">';
+      for (var i = 0; i < res.items.length; i++) {
+        var it = res.items[i];
+        h += '<div class="offitem"><span class="oi">' + it.icon + '</span>' +
+          '<b>' + it.name + '</b><em>×' + fmt(it.n) + '</em></div>';
+      }
+      h += '</div>';
+    } else {
+      h += '<div class="off-h dim">🧺 离线期间没有产出物资</div>';
+    }
+
+    /* 升级最有成就感，优先展示 */
+    if (res.lvups && res.lvups.length) {
+      h += '<div class="off-h">⬆️ 技能升级</div><div class="offlv">';
+      for (var j = 0; j < res.lvups.length; j++) {
+        var L = res.lvups[j];
+        var sk = SKILL_MAP[L.id];
+        h += '<div class="olv"><span>' + (sk ? sk.icon : '') + ' ' + (sk ? sk.name : L.id) + '</span>' +
+          '<s>' + L.from + '</s><i>→</i><b>' + L.to + '</b></div>';
+      }
+      h += '</div>';
+    } else {
+      /* 没升级就展示经验大头，仍然有正反馈 */
+      var top = [];
+      for (var k in (res.xp || {})) top.push({ id: k, v: res.xp[k] });
+      top.sort(function (a, b) { return b.v - a.v; });
+      if (top.length) {
+        h += '<div class="off-h">📈 累计经验</div><div class="offlv">';
+        for (var m = 0; m < Math.min(3, top.length); m++) {
+          var s2 = SKILL_MAP[top[m].id];
+          h += '<div class="olv"><span>' + (s2 ? s2.icon + ' ' + s2.name : top[m].id) + '</span>' +
+            '<b>+' + fmt(top[m].v) + '</b></div>';
+        }
+        h += '</div>';
+      }
+    }
+
+    if (res.deaths > 0) {
+      h += '<div class="off-h dim">💀 战死 ' + fmt(res.deaths) + ' 次（装备耐久需要留意）</div>';
+    }
+    h += '<button class="big" id="btnok">继续冒险</button></div>';
+    w.innerHTML = h;
     w.style.display = '-webkit-box';
     w.style.display = 'flex';
     document.getElementById('btnok').onclick = function () { w.style.display = 'none'; };

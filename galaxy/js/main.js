@@ -49,15 +49,56 @@ const Game = {
   showOffline: function (res) {
     const w = document.getElementById('modalwrap');
     w.style.display = 'flex';
-    w.innerHTML = '<div class="modal">' +
+    let h = '<div class="modal">' +
       '<h2>🌙 离线结算</h2>' +
       '<p class="sub">你离开了 ' + fmtTime(res.sec) + '（上限 ' + bonuses().offline + ' 小时）</p>' +
       '<div class="offgrid">' +
       '<div><span>完成动作</span><b>' + fmt(res.acts) + '</b></div>' +
       '<div><span>获得金币</span><b>' + fmt(res.gold) + '</b></div>' +
-      (res.kills ? '<div><span>战斗继续</span><b>是</b></div>' : '') +
-      '</div>' +
-      '<button class="big" id="btnok">继续冒险</button></div>';
+      (res.combat ? '<div><span>击杀怪物</span><b>' + fmt(res.kills) + '</b></div>' : '') +
+      '</div>';
+
+    if (res.items && res.items.length) {
+      h += '<div style="font-size:12px;color:var(--gold);margin:12px 0 5px">🧺 获得的物资' +
+        (res.itemKinds > res.items.length
+          ? '<span style="color:var(--dim);font-size:10px"> 共 ' + res.itemKinds + ' 种，显示价值最高的 ' + res.items.length + ' 件</span>' : '') +
+        '</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
+      res.items.forEach(function (it) {
+        h += '<div style="width:48%;display:flex;align-items:center;gap:6px;padding:4px;background:#0e1428;border:1px solid #232c50;border-radius:8px;box-sizing:border-box">' +
+          '<span style="font-size:16px">' + it.icon + '</span>' +
+          '<b style="flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + it.name + '</b>' +
+          '<span style="color:#6ddc9c;font-size:11px">×' + fmt(it.n) + '</span></div>';
+      });
+      h += '</div>';
+    }
+
+    if (res.lvups && res.lvups.length) {
+      h += '<div style="font-size:12px;color:var(--gold);margin:12px 0 5px">⬆️ 技能升级</div>';
+      res.lvups.forEach(function (L) {
+        const sk = SKILL_MAP[L.id];
+        h += '<div style="display:flex;align-items:center;font-size:12px;padding:2px 0">' +
+          '<span style="flex:1">' + (sk ? sk.icon + ' ' + sk.name : L.id) + '</span>' +
+          '<span style="color:var(--dim)">' + L.from + '</span>' +
+          '<span style="color:var(--dim);margin:0 4px">→</span>' +
+          '<b style="color:#6ddc9c">' + L.to + '</b></div>';
+      });
+    } else {
+      const top = [];
+      for (const k in (res.xp || {})) top.push({ id: k, v: res.xp[k] });
+      top.sort(function (a, b) { return b.v - a.v; });
+      if (top.length) {
+        h += '<div style="font-size:12px;color:var(--gold);margin:12px 0 5px">📈 累计经验</div>';
+        top.slice(0, 3).forEach(function (t) {
+          const s2 = SKILL_MAP[t.id];
+          h += '<div style="display:flex;font-size:12px;padding:2px 0">' +
+            '<span style="flex:1">' + (s2 ? s2.icon + ' ' + s2.name : t.id) + '</span>' +
+            '<b style="color:#6ddc9c">+' + fmt(t.v) + '</b></div>';
+        });
+      }
+    }
+
+    h += '<button class="big" id="btnok">继续冒险</button></div>';
+    w.innerHTML = h;
     document.getElementById('btnok').onclick = function () { w.style.display = 'none'; };
   },
 
