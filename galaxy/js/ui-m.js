@@ -14,17 +14,26 @@ var MUI = {
   infoId: null,          /* 当前打开的物品信息面板 */
   hoverId: null,         /* 长按悬停中的物品 */
   suppressClick: false,  /* 长按后抑制紧随的 click */
+  /* 背包 */
+  bankCat: 'all',
+  bankQ: -1,             /* 品质筛选：-1 = 全部 */
+  /* 导航 */
+  navOpen: false,        /* 左侧导航是否展开为真列表（收纳时只显示图标） */
+  /* 配方跳转 */
+  focusAct: null, focusActName: null, focusSkillName: null,
   /* 拍卖行 */
   ahTab: 'browse',       /* browse | mine | post */
   ahQ: '',
   ahSort: 'time',
   ahNew: { item: null, qty: 1, start: 0, buyout: 0, dur: 'short' },
+  ahItem: null,          /* 行情趋势选中的物品 */
+  ahDays: 7,             /* 行情周期天数 */
 
   TABS: [
     ['skill', '技能', '🧺'], ['combat', '战斗', '⚔️'], ['bag', '背包', '🎒'],
     ['equip', '装备', '🛡️'], ['mastery', '专精', '✦'], ['task', '任务', '📜'],
-    ['market', '拍卖', '🏪'], ['house', '牧场', '🏠'], ['social', '社交', '🌐'],
-    ['stats', '统计', '📊']
+    ['market', '拍卖', '🏪'], ['vendor', '商人', '💱'], ['house', '牧场', '🏠'],
+    ['social', '社交', '🌐'], ['stats', '统计', '📊']
   ],
 
   init: function () {
@@ -205,6 +214,12 @@ var MUI = {
       '<div class="mp-c">' + MUI.catName(it.cat) + ' ｜ 基准价 ' + fmt(it.price) + ' ｜ 持有 <b>' + fmt(owned) + '</b></div>' +
       '</div><button class="mini mp-x" data-act="modal-close">✕</button></div>';
 
+    /* 品质与回购价 */
+    var qq = qualityOf(id);
+    h += '<div class="mp-sec mp-quality"><div class="mp-lb">品质</div><div class="mp-v">' +
+      '<b class="qbadge" style="background:' + qualityCol(qq) + '">' + qualityName(qq) + '</b>' +
+      ' 商人回购 <b>' + fmt(buyback(id)) + '</b>/个 ｜ 基准价 ' + fmt(it.price) + '</div></div>';
+
     if (it.cat === 'equip') {
       h += '<div class="mp-sec"><div class="mp-lb">属性</div><div class="mp-v">' + MUI.statText(it) + '</div></div>';
       if (it.eff) {
@@ -224,6 +239,7 @@ var MUI = {
       if (equipped) h += '<button data-act="item-gotoenh">去强化</button>';
       if (owned > 0) {
         h += '<button data-act="item-ah" data-a="' + id + '">挂拍卖行</button>';
+        h += '<button data-act="vsellall" data-a="' + id + '">卖给商人 ' + fmt(buyback(id) * owned) + '</button>';
         h += '<button class="red" data-act="sell" data-a="' + id + '" data-b="1">卖 1 个</button>';
       }
     } else if (it.id === 'chest_common' || it.id === 'chest_rare') {
@@ -235,8 +251,14 @@ var MUI = {
         if (inBag > 0) h += '<button data-act="bagdel" data-a="' + id + '">从背包取出</button>';
       }
       if (it.cat === 'drink' && owned > 0) h += '<button class="gold" data-act="drink" data-a="' + id + '">饮用</button>';
+      /* 材料/道具：跳到它的制作配方 */
+      var rc = recipesUsing(id);
+      if (rc.length) {
+        h += '<button class="gold" data-act="item-craft" data-a="' + id + '">🛠 制作（' + rc.length + '）</button>';
+      }
       if (owned > 0) {
         h += '<button data-act="item-ah" data-a="' + id + '">挂拍卖行</button>';
+        h += '<button data-act="vsellall" data-a="' + id + '">卖给商人 ' + fmt(buyback(id) * owned) + '</button>';
         h += '<button data-act="sell" data-a="' + id + '" data-b="1">卖 1 个</button>';
         h += '<button class="red" data-act="sellall" data-a="' + id + '">全部卖出</button>';
       } else {
@@ -323,6 +345,30 @@ var MUI = {
       S.ah.listings = keep; MUI.dirty = true;
     }
     else if (a === 'ah-refresh') { ahRefresh(true); }
+    /* ---- 行情趋势 ---- */
+    else if (a === 'ah-item') { MUI.ahItem = x; MUI.dirty = true; }
+    else if (a === 'ah-days') { MUI.ahDays = parseInt(x, 10) || 7; MUI.dirty = true; }
+    /* ---- 制作跳转 ---- */
+    else if (a === 'item-craft') { MUI.gotoRecipe(x); }
+    else if (a === 'focus-clear') { MUI.focusAct = null; MUI.dirty = true; }
+    /* ---- NPC 商人 ---- */
+    else if (a === 'vsell') { vendorSell(x, parseInt(y || '1', 10)); }
+    else if (a === 'vsellall') { vendorSell(x, count(x)); }
+    else if (a === 'vsellq') {
+      var rq = vendorSellQuality(parseInt(x, 10));
+      MUI.toast(rq.qty ? ('回购 ' + rq.kinds + ' 种 / ' + fmt(rq.qty) + ' 件，+' + fmt(rq.gold) + ' 金币') : '没有该品质物资');
+    }
+    else if (a === 'vsell-all') {
+      var ra = vendorSellAll();
+      MUI.toast(ra.qty ? ('回购 ' + ra.kinds + ' 种 / ' + fmt(ra.qty) + ' 件，+' + fmt(ra.gold) + ' 金币') : '背包是空的');
+    }
+    /* ---- 导航收纳 ---- */
+    else if (a === 'nav-toggle') {
+      MUI.navOpen = !MUI.navOpen;
+      var nv = document.getElementById('mtab');
+      if (nv) { nv.className = MUI.navOpen ? 'open' : ''; }
+      MUI.dirty = true;   /* 重绘以更新箭头文字 */
+    }
     else if (a === 'wipe') {
       if (window.confirm('确定清空存档并重新开始？')) { wipeSave(); location.reload(); }
     }
@@ -335,6 +381,8 @@ var MUI = {
     if (!s) return;
     var v;
     if (s === 'alch') { S.alchTarget = el.value; MUI.dirty = true; }
+    else if (s === 'bagq') { MUI.bankQ = parseInt(el.value, 10); if (isNaN(MUI.bankQ)) MUI.bankQ = -1; MUI.dirty = true; }
+    else if (s === 'ah-item') { MUI.ahItem = el.value; MUI.dirty = true; }
     else if (s === 'ah-q') { MUI.ahQ = el.value || ''; MUI.dirty = true; }
     else if (s === 'ah-sort') { MUI.ahSort = el.value; MUI.dirty = true; }
     else if (s === 'ah-qty') {
@@ -361,6 +409,22 @@ var MUI = {
   },
 
   /* ---------------- 通用操作 ---------------- */
+  /* 从物品面板跳到该物品的制作配方 */
+  gotoRecipe: function (id) {
+    var rc = recipesUsing(id);
+    if (!rc.length) { MUI.toast('这个材料当前没有可用的制作配方'); return; }
+    var r = rc[0];
+    MUI.closeModal();
+    MUI.tab = 'skill';
+    MUI.skill = r.skill;
+    MUI.focusAct = r.act.id;
+    MUI.focusActName = r.act.name;
+    MUI.focusSkillName = SKILL_MAP[r.skill].name;
+    MUI.dirty = true;
+    MUI.scrollTop();
+    MUI.toast(rc.length > 1 ? ('跳到配方「' + r.act.name + '」（共 ' + rc.length + ' 个配方）') : ('跳到配方「' + r.act.name + '」'));
+  },
+
   equipItem: function (id) {
     var it = ITEMS[id];
     if (!it || it.cat !== 'equip') return;
@@ -464,6 +528,7 @@ var MUI = {
     var st = b.scrollTop;
     b.innerHTML = MUI.panel();
     b.scrollTop = st;
+    if (MUI.tab === 'market' && MUI.ahTab === 'browse') MUI.drawTrend();
     if (MUI.infoId) MUI.renderModal();   /* 信息面板打开时同步刷新 */
     MUI.lastRender = Date.now();
   },
@@ -480,11 +545,13 @@ var MUI = {
   },
 
   renderTabs: function () {
-    var h = '';
+    /* 收纳标志在最上方 */
+    var h = '<div class="nav-toggle" data-act="nav-toggle"><i>' + (MUI.navOpen ? '◀' : '▶') + '</i>' +
+      (MUI.navOpen ? '收起' : '展开') + '</div>';
     for (var i = 0; i < MUI.TABS.length; i++) {
       var t = MUI.TABS[i];
       h += '<div class="mtab-i' + (MUI.tab === t[0] ? ' on' : '') + '" data-act="tab" data-a="' + t[0] + '">' +
-        '<i>' + t[2] + '</i>' + t[1] + '</div>';
+        '<i>' + t[2] + '</i><s>' + t[1] + '</s></div>';
     }
     document.getElementById('mtab').innerHTML = h;
   },
@@ -526,6 +593,7 @@ var MUI = {
     if (t === 'mastery') return MUI.pMastery();
     if (t === 'task') return MUI.pTask();
     if (t === 'market') return MUI.pMarket();
+    if (t === 'vendor') return MUI.pVendor();
     if (t === 'house') return MUI.pHouse();
     if (t === 'social') return MUI.pSocial();
     if (t === 'stats') return MUI.pStats();
@@ -579,6 +647,23 @@ var MUI = {
     }
 
     var all = ACTIONS[sk];
+
+    /* 从物品面板「制作」跳过来的目标配方提示 */
+    if (MUI.focusAct) {
+      var fa = null;
+      for (var fi = 0; fi < all.length; fi++) { if (all[fi].id === MUI.focusAct) { fa = all[fi]; break; } }
+      if (fa) {
+        h += '<div class="card foc">🎯 <b>目标配方：</b>' + (fa.icon || '') + fa.name +
+          '<div class="dim" style="margin-top:3px">已高亮，点右侧「生产」排队即可</div>' +
+          '<button class="mini" style="margin-top:6px" data-act="focus-clear">取消高亮</button></div>';
+      } else {
+        var fname = MUI.focusActName || MUI.focusAct;
+        h += '<div class="card foc">🎯 目标配方「' + fname + '」不在本技能下，' +
+          '请切到 <b>' + (MUI.focusSkillName || '对应技能') + '</b>' +
+          '<button class="mini" style="margin-top:6px" data-act="focus-clear">取消</button></div>';
+      }
+    }
+
     var basic = all.filter(function (a) { return !a.makeItem; });
     h += '<div class="hd"><h3>' + (sk === 'cheesesmithing' ? '熔炼配方' : (sk === 'tailoring' ? '织造配方' : '可学动作')) + '</h3></div>';
     for (var i = 0; i < basic.length; i++) h += MUI.actionRow(sk, basic[i], lvl);
@@ -597,7 +682,7 @@ var MUI = {
     var ok = lvl >= a.lvl;
     var ml = masteryLevel(sk, a.id);
     var t = actionTime(sk, a);
-    var h = '<div class="arow act' + (ok ? '' : ' lk') + '"><div class="rowflex">';
+    var h = '<div class="arow act' + (ok ? '' : ' lk') + (MUI.focusAct === a.id ? ' foc' : '') + '"><div class="rowflex">';
     h += '<div class="ai">' + (a.icon || '⏳') + (ml > 0 ? '<em>' + ml + '</em>' : '') + '</div>';
     h += '<div class="am"><div class="an">' + a.name + (ok ? '' : '<i class="lk">🔒' + a.lvl + '级</i>') + '</div>';
     var m2 = '';
@@ -760,27 +845,66 @@ var MUI = {
 
   /* -------- 背包 -------- */
   pBag: function () {
+    /* ---- 概览 ---- */
+    var kinds = 0, qty = 0, vendor = 0;
+    for (var bk in S.bank) {
+      if (!ITEMS[bk] || S.bank[bk] <= 0) continue;
+      kinds++; qty += S.bank[bk];
+      vendor += buyback(bk) * S.bank[bk];
+    }
     var h = '<div class="card"><div class="skhd">' +
       '<span class="ic">🎒</span><span><div class="nm">银行</div>' +
-      '<div class="ds">' + Object.keys(S.bank).length + ' 种物品 · 估值 ' + fmt(MUI.bankValue()) + '</div></span>' +
-      '<span class="lv">' + fmt(S.gold) + '<em>金币</em></span></div></div>';
+      '<div class="ds">' + kinds + ' 种 · ' + fmt(qty) + ' 件 · 估值 ' + fmt(MUI.bankValue()) + '</div></span>' +
+      '<span class="lv">' + fmt(S.gold) + '<em>金币</em></span></div>' +
+      '<div class="chips"><span class="chip">👤 商人回购可得 <b>' + fmt(vendor) + '</b></span>' +
+      '<button class="mini" data-act="vsell-all" style="float:right">一键回购全部</button></div></div>';
 
-    var cats = [['all', '全部'], ['mat', '材料'], ['food', '食物'], ['drink', '饮品'], ['equip', '装备']];
-    h += '<div class="chips">';
-    for (var i = 0; i < cats.length; i++) {
-      h += '<span class="chip' + (MUI.bankCat === cats[i][0] ? ' on' : '') + '" data-act="bankcat" data-a="' + cats[i][0] + '">' + cats[i][1] + '</span>';
+    /* ---- 分类模块（全部在前） ---- */
+    h += '<div class="bagnav">';
+    for (var i = 0; i < BAG_CATS.length; i++) {
+      var c = BAG_CATS[i];
+      var cnt = 0;
+      for (var c2 in S.bank) {
+        if (ITEMS[c2] && S.bank[c2] > 0 && (c.id === 'all' || bagCatOf(c2) === c.id)) cnt++;
+      }
+      h += '<div class="bagt' + (MUI.bankCat === c.id ? ' on' : '') + '" data-act="bankcat" data-a="' + c.id + '">' +
+        '<i>' + c.ic + '</i><s>' + c.name + '</s><em>' + cnt + '</em></div>';
     }
     h += '</div>';
 
+    /* ---- 品质筛选 ---- */
+    h += '<div class="ahsrch"><select class="inp" data-sel="bagq">';
+    h += '<option value="-1"' + (MUI.bankQ === -1 ? ' selected' : '') + '>全部品质</option>';
+    for (var qi = 0; qi < QUALITY.length; qi++) {
+      h += '<option value="' + qi + '"' + (MUI.bankQ === qi ? ' selected' : '') + '>' +
+        qualityName(qi) + '（回购 ' + QUALITY[qi].buy + '/个）</option>';
+    }
+    h += '</select></div>';
+
+    /* ---- 物品列表（分类 + 品质双重过滤） ---- */
     var ids = Object.keys(S.bank).filter(function (id) {
       if (!ITEMS[id] || S.bank[id] <= 0) return false;
-      return MUI.bankCat === 'all' ? true : (ITEMS[id].cat === MUI.bankCat);
-    }).sort(function (a, b) { return ITEMS[b].price * S.bank[b] - ITEMS[a].price * S.bank[a]; });
+      if (MUI.bankCat !== 'all' && bagCatOf(id) !== MUI.bankCat) return false;
+      if (MUI.bankQ >= 0 && qualityOf(id) !== MUI.bankQ) return false;
+      return true;
+    }).sort(function (a, b2) {
+      var qa = qualityOf(a), qb = qualityOf(b2);
+      if (qa !== qb) return qb - qa;
+      return ITEMS[b2].price * S.bank[b2] - ITEMS[a].price * S.bank[a];
+    });
 
+    if (!ids.length) {
+      h += '<div class="card dim">该分类下没有符合条件的物品</div>';
+      return h;
+    }
+    h += '<div class="hd"><h3>' + MUI.bagCatName() + '（' + ids.length + ' 种）</h3></div>';
     h += '<div class="igrid">';
     for (var j = 0; j < ids.length; j++) {
       var it = ITEMS[ids[j]], n = S.bank[ids[j]];
-      h += '<div class="icell" data-item="' + ids[j] + '"><div class="ii">' + it.icon + '</div>' +
+      var q = qualityOf(ids[j]);
+      h += '<div class="icell" data-item="' + ids[j] + '" style="border-color:' + qualityCol(q) + '">' +
+        '<em class="qbar" style="background:' + qualityCol(q) + '"></em>' +
+        '<div class="ii">' + it.icon + '</div>' +
         '<div class="in">' + it.name + '</div><div class="iq">×' + fmt(n) + '</div>';
       if (ids[j] === 'chest_common' || ids[j] === 'chest_rare') {
         h += '<button class="gold" data-act="open-chest" data-a="' + ids[j] + '">开启</button>';
@@ -791,6 +915,54 @@ var MUI = {
     }
     h += '</div>';
     return h;
+  },
+  bagCatName: function () {
+    for (var i = 0; i < BAG_CATS.length; i++) if (BAG_CATS[i].id === MUI.bankCat) return BAG_CATS[i].name;
+    return '全部';
+  },
+
+  /* -------- NPC 商人回购 -------- */
+  pVendor: function () {
+    var st = bankQualityStats();
+    var total = 0, tq = 0;
+    for (var i = 0; i < st.length; i++) { total += st[i].gold; tq += st[i].qty; }
+
+    var h = '<div class="card"><div class="skhd">' +
+      '<span class="ic">👤</span><span><div class="nm">杂货商 · 老麦</div>' +
+      '<div class="ds">以固定品质价即时回购各类物资，价格远低于拍卖行，但立刻到账</div></span>' +
+      '<span class="lv">' + fmt(S.gold) + '<em>金币</em></span></div>' +
+      '<div class="tips dim">回购是金币回收的主渠道：承担较大的价格折让，用来抑制后期物资堆积导致的通货膨胀。想卖高价请挂拍卖行。</div></div>';
+
+    h += '<div class="hd"><h3>按品质一键回购</h3></div>';
+    var any = false;
+    for (var q = QUALITY.length - 1; q >= 0; q--) {
+      var s = st[q];
+      if (!s.qty) continue;
+      any = true;
+      h += '<div class="ahrow"><span class="ahic">' + MUI.qualitySample(q) + '</span>' +
+        '<span class="ahmid"><div class="ahn"><b class="qbadge" style="background:' + qualityCol(q) + '">' + qualityName(q) + '</b>' +
+        '<em>×' + fmt(s.qty) + '</em></div>' +
+        '<div class="ahp">' + s.kinds + ' 种 ｜ 单价 ' + QUALITY[q].buy + ' ｜ 合计 ' + fmt(s.gold) + '</div></span>' +
+        '<span class="ahbt"><button class="gold" data-act="vsellq" data-a="' + q + '">回购</button></span></div>';
+    }
+    if (!any) h += '<div class="card dim">背包里没有可回购的物资</div>';
+
+    h += '<div style="padding:8px 0"><button class="wide gold" data-act="vsell-all">💱 回购全部物资（' + fmt(tq) + ' 件 → ' + fmt(total) + ' 金币）</button></div>';
+
+    h += '<div class="hd"><h3>NPC 回购价目表</h3></div><div class="card">';
+    for (var k = 0; k < QUALITY.length; k++) {
+      h += '<div class="vrow"><b class="qbadge" style="background:' + qualityCol(k) + '">' + qualityName(k) + '</b>' +
+        '<span class="dim">T' + (k + 1) + '</span><span class="vp">' + fmt(QUALITY[k].buy) + ' 金币/个</span></div>';
+    }
+    h += '<div class="dim" style="margin-top:6px">品级由物品 tier 决定；回购价刻意压低，' +
+      '鼓励玩家通过拍卖行互通有无，同时把过剩产出转化为稳定的低价金币来源。</div></div>';
+    return h;
+  },
+  qualitySample: function (q) {
+    for (var k in S.bank) {
+      if (ITEMS[k] && S.bank[k] > 0 && qualityOf(k) === q) return ITEMS[k].icon;
+    }
+    return '📦';
   },
   bankValue: function () {
     var v = 0;
@@ -952,10 +1124,134 @@ var MUI = {
       '<span class="chip' + (MUI.ahTab === 'post' ? ' on' : '') + '" data-act="ahtab" data-a="post">📤 上架物品</span>' +
       '</div>';
 
-    if (MUI.ahTab === 'browse') h += MUI.ahBrowse();
+    if (MUI.ahTab === 'browse') h += MUI.ahTrend() + MUI.ahBrowse();
     else if (MUI.ahTab === 'mine') h += MUI.ahMine();
     else h += MUI.ahPostPage();
     return h;
+  },
+
+  /* -------- 行情趋势区 -------- */
+  ahTrend: function () {
+    var i, id, seen = {}, pool = [];
+    for (id in S.bank) { if (ITEMS[id] && S.bank[id] > 0 && !seen[id]) { seen[id] = 1; pool.push(id); } }
+    var lst = (S.ah && S.ah.listings) ? S.ah.listings : [];
+    for (i = 0; i < lst.length; i++) {
+      id = lst[i].item;
+      if (ITEMS[id] && !seen[id]) { seen[id] = 1; pool.push(id); }
+    }
+    if (!pool.length) { for (i = 0; i < ITEM_LIST.length && i < 40; i++) pool.push(ITEM_LIST[i].id); }
+    if (!MUI.ahItem || !ITEMS[MUI.ahItem]) MUI.ahItem = pool[0];
+    var cur = MUI.ahItem;
+    var series = priceSeries(cur, MUI.ahDays);
+    MUI._trend = series;
+
+    var prices = [];
+    for (i = 0; i < series.length; i++) prices.push(series[i].p);
+    var mn = Math.min.apply(null, prices), mx = Math.max.apply(null, prices);
+    var first = series[0].p, last = series[series.length - 1].p;
+    var dlt = first > 0 ? Math.round((last - first) / first * 1000) / 10 : 0;
+
+    var h = '<div class="card"><div class="hd"><h3>📈 行情价趋势</h3></div>';
+    h += '<div class="ahsrch"><select class="inp" data-sel="ah-item">';
+    for (i = 0; i < pool.length && i < 60; i++) {
+      h += '<option value="' + pool[i] + '"' + (pool[i] === cur ? ' selected' : '') + '>' +
+        ITEMS[pool[i]].icon + ' ' + ITEMS[pool[i]].name + '</option>';
+    }
+    h += '</select></div>';
+    var days = [3, 7, 15, 30, 90, 180, 365];
+    h += '<div class="chips2">';
+    for (i = 0; i < days.length; i++) {
+      h += '<span class="chip' + (MUI.ahDays === days[i] ? ' on' : '') + '" data-act="ah-days" data-a="' + days[i] + '">' + days[i] + '天</span>';
+    }
+    h += '</div>';
+    h += '<div class="trend-wrap"><canvas id="trend"></canvas></div>';
+    h += '<div class="chips2">' +
+      '<span class="chip">最高 <b>' + fmt(mx) + '</b></span>' +
+      '<span class="chip">最低 <b>' + fmt(mn) + '</b></span>' +
+      '<span class="chip">现价 <b>' + fmt(last) + '</b></span>' +
+      '<span class="chip">' + (dlt >= 0 ? '↑涨' : '↓跌') + ' <b>' + Math.abs(dlt) + '%</b></span>' +
+      '</div>';
+    h += '<div class="dim" style="padding:4px 8px 0">X 轴＝价格 · Y 轴＝日期（自上而下由远及近）</div>';
+    h += '</div>';
+    return h;
+  },
+
+  drawTrend: function () {
+    var cv = document.getElementById('trend');
+    if (!cv || typeof cv.getContext !== 'function') return;
+    var pts = MUI._trend;
+    var wrap = cv.parentNode;
+    var w = wrap.clientWidth || 260;
+    var hh = 190;
+    var dpr = window.devicePixelRatio || 1;
+    if (dpr > 2) dpr = 2;
+    if (w < 60) w = 260;
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(hh * dpr);
+    cv.style.width = w + 'px';
+    cv.style.height = hh + 'px';
+    var g = cv.getContext('2d');
+    if (!g) return;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, hh);
+    if (!pts || pts.length < 2) return;
+
+    var i, prices = [];
+    for (i = 0; i < pts.length; i++) prices.push(pts[i].p);
+    var mn = Math.min.apply(null, prices), mx = Math.max.apply(null, prices);
+    if (mx - mn < 1) mx = mn + 1;
+    var padL = 38, padR = 50, padT = 10, padB = 18;
+    var iw = w - padL - padR, ih = hh - padT - padB;
+    if (iw < 10) iw = 10;
+    function X(p) { return padL + (p - mn) / (mx - mn) * iw; }
+    function Y(k) { return padT + (k / (pts.length - 1)) * ih; }
+
+    /* 横向网格 */
+    g.strokeStyle = '#232c50'; g.lineWidth = 1;
+    for (i = 0; i <= 3; i++) {
+      var gy = padT + ih * i / 3;
+      g.beginPath(); g.moveTo(padL, gy); g.lineTo(w - padR, gy); g.stroke();
+    }
+    /* 面积 */
+    g.beginPath();
+    g.moveTo(padL, padT);
+    for (i = 0; i < pts.length; i++) g.lineTo(X(pts[i].p), Y(i));
+    g.lineTo(padL, Y(pts.length - 1));
+    g.closePath();
+    g.fillStyle = 'rgba(242,193,78,.13)';
+    g.fill();
+    /* 折线 */
+    g.beginPath();
+    for (i = 0; i < pts.length; i++) {
+      var xx = X(pts[i].p), yy = Y(i);
+      if (i === 0) g.moveTo(xx, yy); else g.lineTo(xx, yy);
+    }
+    g.strokeStyle = '#f2c14e'; g.lineWidth = 1.8; g.stroke();
+    /* 当前点 */
+    var n = pts.length - 1;
+    g.beginPath(); g.arc(X(pts[n].p), Y(n), 3.2, 0, 6.2832);
+    g.fillStyle = '#f2c14e'; g.fill();
+
+    /* 日期（左） */
+    g.font = '10px sans-serif';
+    g.textAlign = 'right';
+    g.fillStyle = '#6b7599';
+    var marks = [0, Math.floor(n / 2), n];
+    for (i = 0; i < 3; i++) {
+      if (marks[i] < 0 || marks[i] > n) continue;
+      g.fillText(dayLabel(pts[marks[i]].day), padL - 5, Y(marks[i]) + 3);
+    }
+    /* 价格（右） */
+    g.textAlign = 'left';
+    g.fillStyle = '#8892b8';
+    g.fillText(fmt(mx), w - padR + 5, padT + 8);
+    g.fillText(fmt(mn), w - padR + 5, padT + ih - 1);
+    g.fillStyle = '#f2c14e';
+    g.fillText(fmt(pts[n].p), X(pts[n].p) + 6, Y(n) + 3);
+    /* 轴说明 */
+    g.textAlign = 'center';
+    g.fillStyle = '#4b5578';
+    g.fillText('价格 →', padL + iw / 2, hh - 4);
   },
 
   pickForAh: function (id) {

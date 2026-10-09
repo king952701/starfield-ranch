@@ -368,6 +368,120 @@ function fillOrder(oid) {
  *  - 竞标：每次至少加价 5%，被超价立即退款
  *  - 结算：成交退押金，流拍退物品不退押金
  * ============================================================ */
+/* ============================================================
+ *  NPC 商人回购（低于拍卖行价，即时变现，用于回收过剩物资）
+ * ============================================================ */
+function vendorSell(id, n) {
+  n = Math.min(Math.round(n) || 0, count(id));
+  if (n <= 0) return 0;
+  takeItems({ [id]: n });
+  const g = buyback(id) * n;
+  addGold(g);
+  pushLog('卖给商人 ' + n + ' × ' + ITEMS[id].name + '，+' + fmt(g) + ' 金币');
+  UI.dirty = true;
+  return g;
+}
+/* 回购指定品质的全部物品 */
+function vendorSellQuality(q) {
+  let kinds = 0, qty = 0, gold = 0;
+  for (const k in S.bank) {
+    if (!ITEMS[k] || S.bank[k] <= 0) continue;
+    if (qualityOf(k) !== q) continue;
+    kinds++; qty += S.bank[k];
+    gold += buyback(k) * S.bank[k];
+    delete S.bank[k];
+  }
+  if (qty > 0) {
+    addGold(gold);
+    pushLog('商人回购 ' + qualityName(q) + '物资 ' + kinds + ' 种 / ' + fmt(qty) + ' 件，+' + fmt(gold) + ' 金币');
+  }
+  UI.dirty = true;
+  return { kinds: kinds, qty: qty, gold: gold };
+}
+function vendorSellAll() {
+  let kinds = 0, qty = 0, gold = 0;
+  for (const k in S.bank) {
+    if (!ITEMS[k] || S.bank[k] <= 0) continue;
+    kinds++; qty += S.bank[k];
+    gold += buyback(k) * S.bank[k];
+    delete S.bank[k];
+  }
+  if (qty > 0) {
+    addGold(gold);
+    pushLog('商人回购全部物资 ' + kinds + ' 种 / ' + fmt(qty) + ' 件，+' + fmt(gold) + ' 金币');
+  }
+  UI.dirty = true;
+  return { kinds: kinds, qty: qty, gold: gold };
+}
+/* 银行各品质统计 */
+function bankQualityStats() {
+  const out = [];
+  for (let q = 0; q < QUALITY.length; q++) out.push({ q: q, kinds: 0, qty: 0, gold: 0 });
+  for (const k in S.bank) {
+    if (!ITEMS[k] || S.bank[k] <= 0) continue;
+    const q = qualityOf(k);
+    out[q].kinds++;
+    out[q].qty += S.bank[k];
+    out[q].gold += buyback(k) * S.bank[k];
+  }
+  return out;
+}
+
+/* ============================================================
+ *  行情趋势：确定性伪随机历史价格（同一天同一物品结果稳定）
+ * ============================================================ */
+function hash32(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; }
+  return h >>> 0;
+}
+function rnd01(seed) {
+  let x = seed >>> 0;
+  x ^= x << 13; x >>>= 0;
+  x ^= x >>> 17;
+  x ^= x << 5; x >>>= 0;
+  return (x % 100000) / 100000;
+}
+function priceSeries(id, days) {
+  const it = ITEMS[id];
+  if (!it) return [];
+  const base = Math.max(1, it.price || 1);
+  const today = Math.floor(Date.now() / 86400000);
+  const start = today - days + 1;
+  let v = base * (0.74 + rnd01(hash32(id)) * 0.22);
+  const out = [];
+  for (let i = 0; i < days; i++) {
+    const seed = hash32(id + '|' + (start + i));
+    const drift = (rnd01(seed) - 0.485) * 0.12;      /* 日波动 */
+    v = Math.max(base * 0.35, Math.min(base * 2.6, v * (1 + drift)));
+    v += (base - v) * 0.055;                          /* 向基准回归 */
+    out.push({ day: start + i, p: Math.max(1, Math.round(v)) });
+  }
+  return out;
+}
+function dayLabel(d) {
+  const dt = new Date(d * 86400000);
+  const m = dt.getMonth() + 1, dd = dt.getDate();
+  return (m < 10 ? '0' + m : m) + '/' + (dd < 10 ? '0' + dd : dd);
+}
+
+/* ============================================================
+ *  配方检索：某材料能参与哪些制作
+ * ============================================================ */
+function recipesUsing(id) {
+  const out = [];
+  for (const sk in ACTIONS) {
+    ACTIONS[sk].forEach(function (a) {
+      if (a.in && a.in[id]) out.push({ skill: sk, act: a });
+    });
+  }
+  return out;
+}
+function firstRecipe(id) {
+  const r = recipesUsing(id);
+  return r.length ? r[0] : null;
+}
+
 const AH_DURS = [
   { id: 'short', name: '短', hours: 2, mul: 1 },
   { id: 'med', name: '中', hours: 8, mul: 2 },

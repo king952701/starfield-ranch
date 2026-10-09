@@ -277,6 +277,67 @@ function pushLog(msg) {
 }
 
 /* ---------- 存档 ---------- */
+/* ============================================================
+ *  品质体系与商人回购价
+ *  回购价是全局金币回收的锚：远低于市价，用于回收过剩物资、
+ *  防止后期物资堆积导致的通货膨胀。玩家想卖高价应走拍卖行。
+ * ============================================================ */
+const QUALITY = [
+  { name: '粗糙', col: '#8a8f9e', buy: 1 },
+  { name: '普通', col: '#8ad8ff', buy: 4 },
+  { name: '优良', col: '#6ddc9c', buy: 8 },
+  { name: '精良', col: '#5b8cff', buy: 20 },
+  { name: '稀有', col: '#a67cff', buy: 50 },
+  { name: '史诗', col: '#f2c14e', buy: 120 },
+  { name: '传说', col: '#ff9a4d', buy: 300 },
+  { name: '神话', col: '#ff6b8a', buy: 800 },
+  { name: '星辉', col: '#66ffe0', buy: 2000 }
+];
+
+function qualityOf(id) {
+  const it = ITEMS[id];
+  if (!it) return 0;
+  if (typeof it.tier === 'number') {
+    const t = it.tier;
+    if (t >= 0 && t < QUALITY.length) return t;
+  }
+  const p = it.price || 1;
+  if (p < 40) return 0;
+  if (p < 150) return 1;
+  if (p < 600) return 2;
+  if (p < 2400) return 3;
+  if (p < 9000) return 4;
+  if (p < 40000) return 5;
+  if (p < 150000) return 6;
+  return 7;
+}
+function qualityName(q) { return QUALITY[q] ? QUALITY[q].name : '—'; }
+function qualityCol(q) { return QUALITY[q] ? QUALITY[q].col : '#8892b8'; }
+function buyback(id) { return QUALITY[qualityOf(id)].buy; }
+
+/* 背包分类：材料 / 道具 / 装备(防具) / 武器 / 工具 / 护符 */
+function bagCatOf(id) {
+  const it = ITEMS[id];
+  if (!it) return 'mat';
+  if (it.cat === 'mat') return 'mat';
+  if (it.cat === 'equip') {
+    if (it.slot === 'weapon') return 'weapon';
+    if (it.slot === 'tool' || it.toolSkill) return 'tool';
+    if (it.slot === 'neck' || it.slot === 'ring' || it.slot === 'offhand') return 'amulet';
+    return 'equip';
+  }
+  return 'use';
+}
+const BAG_CATS = [
+  { id: 'all', name: '全部', ic: '📦' },
+  { id: 'mat', name: '材料', ic: '🧪' },
+  { id: 'use', name: '道具', ic: '🧰' },
+  { id: 'equip', name: '装备', ic: '🛡️' },
+  { id: 'weapon', name: '武器', ic: '🗡️' },
+  { id: 'tool', name: '工具', ic: '🛠️' },
+  { id: 'amulet', name: '护符', ic: '📿' }
+];
+
 function saveGame() {
   S.savedAt = Date.now();
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { }
