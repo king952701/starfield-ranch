@@ -386,7 +386,9 @@ function taskInterval() {
   let h = 8;
   ['t_cd1', 't_cd2', 't_cd3', 't_cd4'].forEach(function (k) { if (S.shop[k]) h--; });
   if (window.Talents) h *= window.Talents.extras().taskIntMul;   /* 天赋「消息灵通」 */
-  return h * 3600 * 1000;
+  /* 任务点里程碑：累计完成 1000 个任务后间隔 -30 分钟 */
+  const ms = h * 3600 * 1000 - (taskMilestone().taskIntCut || 0) * 60000;
+  return Math.max(NUM.TASK_INT_MIN_MS, ms);
 }
 function taskSlots() {
   let n = 6 + (S.shop['t_slot'] || 0);
@@ -473,7 +475,7 @@ function claimTask(id) {
   if (window.Talents) t.gold = Math.round(t.gold * (1 + window.Talents.extras().task));  /* 天赋「人脉」等 */
   addGold(t.gold);
   S.tokens += t.tokens;
-  S.taskPoints += t.tokens;
+  S.taskPoints += 1;        /* 累计完成的任务数（里程碑用）：代币数是 t.tokens，两者不同 */
   S.tasks.splice(i, 1);
   pushLog('✅ 完成任务，获得 ' + fmt(t.gold) + ' 金币、' + t.tokens + ' 任务代币');
   UI.dirty = true;

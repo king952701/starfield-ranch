@@ -5,7 +5,7 @@
  * ============================================================ */
 
 const SAVE_KEY = 'starfield_ranch_v1';
-const SAVE_VERSION = 2;   /* 存档结构版本：新增字段时 +1，loadGame 按版本补齐 */
+const SAVE_VERSION = 3;   /* 存档结构版本：新增字段时 +1，loadGame 按版本补齐 */
 
 /* ---------- 经验表 ---------- */
 function xpDiff(L) { return Math.floor((L - 1 + 300 * Math.pow(2, (L - 1) / 7)) / 4); }
@@ -234,6 +234,28 @@ function drinkBuff(kind) {
 }
 function addBuff(b) { b.until = Date.now() + b.dur * 1000; S.buffs.push(b); UI.dirty = true; }
 
+/* ---------- 任务点里程碑 ----------
+ * taskPoints = 累计完成任务数。按阈值解锁永久小幅加成（见 NUM.TASK_MILESTONES）。
+ * 返回已解锁奖励的汇总 + 下一个未解锁档位（供 UI 显示进度）。
+ */
+function taskMilestone(n) {
+  const out = { effAll: 0, rare: 0, xp: 0, offline: 0, taskIntCut: 0, unlocked: 0, next: null };
+  const tp = (typeof n === 'number') ? n : (S.taskPoints || 0);
+  const L = NUM.TASK_MILESTONES || [];
+  for (let i = 0; i < L.length; i++) {
+    const m = L[i];
+    if (tp < m.n) { if (!out.next) out.next = m; continue; }
+    out.unlocked++;
+    if (m.effAll) out.effAll += m.effAll;
+    if (m.rare) out.rare += m.rare;
+    if (m.xp) out.xp += m.xp;
+    if (m.offline) out.offline += m.offline;
+    if (m.taskIntCut) out.taskIntCut += m.taskIntCut;
+  }
+  out.points = tp;
+  return out;
+}
+
 /* ---------- 全局加成汇总 ---------- */
 function bonuses() {
   const agg = equipAgg();
@@ -288,6 +310,12 @@ function bonuses() {
     if (T.effAll) B.effAll += T.effAll;
     for (const k in T.eff) B.eff[k] = (B.eff[k] || 0) + T.eff[k];
   }
+  /* 任务点里程碑：累计完成任务解锁的永久加成 */
+  const TM = taskMilestone();
+  if (TM.effAll) B.effAll = (B.effAll || 0) + TM.effAll;
+  if (TM.rare) B.rare += TM.rare;
+  if (TM.xp) B.xp += TM.xp;
+  if (TM.offline) B.offline += TM.offline;
   return B;
 }
 
@@ -518,6 +546,13 @@ function loadGame() {
         if (S.pool[s.id] == null) S.pool[s.id] = 0;
       });
       S.version = 2;
+    }
+    if (S.version < 3) {
+      /* v3：taskPoints 语义从「累计获得的任务代币」改为「累计完成任务数」。
+         老档按均值折算，避免直接顶满里程碑。 */
+      if (typeof S.taskPoints !== 'number' || !isFinite(S.taskPoints)) S.taskPoints = 0;
+      else if (S.taskPoints > 0) S.taskPoints = Math.round(S.taskPoints / NUM.TASK_POINTS_LEGACY_DIV);
+      S.version = 3;
     }
     return true;
   } catch (e) { return false; }

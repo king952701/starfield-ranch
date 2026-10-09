@@ -315,8 +315,10 @@ Object.assign(UI, {
     const left = Math.max(0, S.nextTask - Date.now());
     let h = '<div class="ph"><div class="phic">📜</div><div class="phtxt"><h2>任务板</h2><p>每 ' + (taskInterval() / 3600000) + ' 小时生成新任务，上限 ' + taskSlots() + ' 个。完成任务获得金币与任务代币。</p></div>' +
       '<div class="phlv"><b>' + S.tokens + '</b><span>任务代币</span></div></div>';
-    /* taskPoints 只做「累计完成任务数」统计，不消费也不兑换；文案必须说清，避免被当成货币 */
-    h += '<div class="chips"><div class="chip">⏳ 下次任务 ' + fmtTime(left / 1000) + '</div><div class="chip">🎯 已完成任务 ' + (S.taskPoints || 0) + ' 个</div></div>';
+    /* taskPoints = 累计完成任务数：不是货币，用来解锁里程碑加成 */
+    const TM = taskMilestone();
+    h += '<div class="chips"><div class="chip">⏳ 下次任务 ' + fmtTime(left / 1000) + '</div>' +
+      '<div class="chip">🎯 已完成任务 ' + TM.points + ' 个（已解锁 ' + TM.unlocked + '/' + NUM.TASK_MILESTONES.length + ' 档）</div></div>';
     h += '<div class="tasks">';
     if (!S.tasks.length) h += '<div class="dim">暂无任务</div>';
     S.tasks.forEach(function (t) {
@@ -332,6 +334,13 @@ Object.assign(UI, {
         '<button class="mini" data-act="task-reroll" data-a="' + t.id + '" data-b="gold">重掷(1万)</button>' +
         '<button class="mini" data-act="task-reroll" data-a="' + t.id + '" data-b="bell">重掷(🔔1)</button>' +
         '<button class="mini red" data-act="task-drop" data-a="' + t.id + '">放弃</button></div></div>';
+    });
+    h += '</div>';
+    h += '<h3 class="sec">任务里程碑</h3><div class="shop">';
+    NUM.TASK_MILESTONES.forEach(function (m) {
+      const got = TM.points >= m.n;
+      h += '<div class="shopi' + (got ? '' : ' lock') + '"><b>' + (got ? '✅ ' : '🔒 ') + m.n + ' 个任务</b>' +
+        '<p>' + m.desc + (got ? '' : '　还差 ' + (m.n - TM.points) + ' 个') + '</p></div>';
     });
     h += '</div>';
     h += '<h3 class="sec">代币商店</h3><div class="shop">';

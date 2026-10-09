@@ -1579,13 +1579,14 @@ var MUI = {
   /* -------- 任务 -------- */
   pTask: function () {
     var left = Math.max(0, S.nextTask - Date.now());
+    var TM = taskMilestone();
     var h = '<div class="card"><div class="skhd">' +
       '<span class="ic">📜</span><span><div class="nm">任务板</div>' +
       '<div class="ds">每 ' + (taskInterval() / 3600000) + ' 小时生成，上限 ' + taskSlots() + ' 个</div></span>' +
       '<span class="lv">' + S.tokens + '<em>代币</em></span></div>' +
       '<div class="chips"><span class="chip">⏳下次 <b>' + fmtTime(left / 1000) + '</b></span>' +
-      /* 同上：taskPoints 是完成数统计，不是可消费货币 */
-      '<span class="chip">🎯已完成 <b>' + (S.taskPoints || 0) + '</b> 个任务</span></div></div>';
+      /* 同上：taskPoints 是累计完成数，用来解锁里程碑加成，不是货币 */
+      '<span class="chip">🎯已完成 <b>' + TM.points + '</b> 个（' + TM.unlocked + '/' + NUM.TASK_MILESTONES.length + ' 档）</span></div></div>';
 
     for (var i = 0; i < S.tasks.length; i++) {
       var t = S.tasks[i];
@@ -1604,6 +1605,15 @@ var MUI = {
         '</div></div>';
     }
     if (!S.tasks.length) h += '<div class="card dim">暂无任务，等待生成…</div>';
+
+    h += '<div class="hd"><h3>任务里程碑</h3></div><div class="shop">';
+    for (var mi = 0; mi < NUM.TASK_MILESTONES.length; mi++) {
+      var m = NUM.TASK_MILESTONES[mi];
+      var got = TM.points >= m.n;
+      h += '<div class="si' + (got ? '' : ' lk') + '"><b>' + (got ? '✅ ' : '🔒 ') + m.n + ' 个任务</b>' +
+        '<p>' + m.desc + (got ? '' : '　还差 ' + (m.n - TM.points) + ' 个') + '</p></div>';
+    }
+    h += '</div>';
 
     h += '<div class="hd"><h3>代币商店</h3></div><div class="shop">';
     for (var k = 0; k < TOKEN_SHOP.length; k++) {
