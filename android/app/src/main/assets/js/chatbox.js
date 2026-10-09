@@ -63,7 +63,9 @@
     '  font-size:12px;cursor:pointer;-webkit-flex:0 0 auto;flex:0 0 auto;}',
     '.chat-go:active{background:#1a2138;}',
     '.chat-go img{width:13px;height:13px;margin-right:4px;}',
-    '.chat-go span{font-size:12px;}'
+    '.chat-go span{font-size:12px;}',
+    /* 消息里的 [物品链接]：点一下拉起该物品的信息面板 */
+    '.chat-lk{color:#8ad8ff;text-decoration:underline;cursor:pointer;}'
   ].join('');
   var st = document.createElement('style');
   st.appendChild(document.createTextNode(CSS));
@@ -154,6 +156,37 @@
     return c.length;
   }
 
+  /* 道具名 -> id（聊天里发出的是 [物品名] 链接，要能点开信息面板） */
+  function itemLookup() {
+    var m = {};
+    if (typeof ITEM_LIST === 'undefined') return m;
+    for (var i = 0; i < ITEM_LIST.length; i++) {
+      if (ITEM_LIST[i] && ITEM_LIST[i].name) m[ITEM_LIST[i].name] = ITEM_LIST[i].id;
+    }
+    return m;
+  }
+  /* 把文本里的 [xxx] 渲染成可点链接（逐段建节点，天然免疫 HTML 注入） */
+  function linkify(parent, text) {
+    var map = itemLookup(), re = /\[([^\[\]]{1,20})\]/g, last = 0, m;
+    while ((m = re.exec(text)) !== null) {
+      if (m.index > last) parent.appendChild(document.createTextNode(text.slice(last, m.index)));
+      if (map[m[1]]) {
+        (function (id) {
+          var s = el('span', 'chat-lk', '[' + m[1] + ']');
+          s.addEventListener('click', function (e) {
+            if (e.stopPropagation) e.stopPropagation();
+            if (window.ItemInfo && window.ItemInfo.show) window.ItemInfo.show(id);
+          }, false);
+          parent.appendChild(s);
+        })(map[m[1]]);
+      } else {
+        parent.appendChild(document.createTextNode(m[0]));
+      }
+      last = m.index + m[0].length;
+    }
+    if (last < text.length) parent.appendChild(document.createTextNode(text.slice(last)));
+  }
+
   function render(force) {
     var c = msgs();
     if (!force && c.length === renderedLen && c[0] === renderedTop) return;   /* 没新消息就不重绘 */
@@ -163,7 +196,7 @@
     for (var i = 0; i < c.length; i++) {
       var d = el('div', 'chat-m' + (c[i].n === '我' ? ' me' : ''));
       d.appendChild(el('b', '', c[i].n + '：'));
-      d.appendChild(document.createTextNode(c[i].m));
+      linkify(d, c[i].m);
       bodyEl.appendChild(d);
     }
   }
