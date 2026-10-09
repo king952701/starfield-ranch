@@ -40,6 +40,9 @@ var MUI = {
   achCat: 'all',
   achFilter: 'doing',   /* doing | ready | done | all */
   achQ: '',
+  /* 排行榜 */
+  lbCat: 'total',
+  heroId: null,
 
   init: function () {
     document.addEventListener('click', MUI.onClick, false);
@@ -333,6 +336,10 @@ var MUI = {
       if (window.SFX) { window.SFX.setOn(!window.SFX.on); MUI.dirty = true; }
     }
     else if (a === 'sfx-test') { if (window.SFX) window.SFX.play(x); }
+    /* ---- 排行榜 / 玩家档案 ---- */
+    else if (a === 'lbcat') { MUI.lbCat = x; MUI.dirty = true; }
+    else if (a === 'hero') { if (x && heroOf(x)) { MUI.heroId = x; sfxEvt('open'); MUI.renderHero(); } }
+    else if (a === 'heroclose') { MUI.heroId = null; sfxEvt('close'); MUI.renderHero(); }
     else if (a === 'combat-start') { if (!S.combat || !S.combat.active) Combat.start(x); else Combat.stop(); }
     else if (a === 'combat-stop') { Combat.stop(); }
     else if (a === 'heal') { Combat.healFull(); }
@@ -1785,13 +1792,43 @@ var MUI = {
       h += '</div>';
     }
 
-    var lb = MUI.leaderboard(totalLevel());
-    h += '<div class="hd"><h3>总等级排行</h3></div><div class="card lb">';
-    for (var j = 0; j < lb.length; j++) {
-      h += '<div class="r' + (lb[j].me ? ' me' : '') + '"><span class="k">' + (j + 1) + '</span>' +
-        lb[j].name + '<span class="v">' + lb[j].lv + '</span></div>';
+    /* ---- 专属类别动态排行榜 ---- */
+    var cats = LB_CATS;
+    h += '<div class="hd"><h3>排行榜</h3></div>';
+    h += '<div class="lbtabs">';
+    for (var ct = 0; ct < cats.length; ct++) {
+      h += '<span class="lbtab' + (MUI.lbCat === cats[ct].id ? ' on' : '') + '" data-act="lbcat" data-a="' +
+        cats[ct].id + '"><i>' + cats[ct].ic + '</i><s>' + cats[ct].nm + '</s></span>';
     }
     h += '</div>';
+
+    var cd = lbCat(MUI.lbCat);
+    var rows = lbRanking(MUI.lbCat);
+    var myRank = 0, mine = null;
+    for (var mj = 0; mj < rows.length; mj++) if (rows[mj].me) { myRank = rows[mj].rank; mine = rows[mj]; }
+    var total = cd.id === 'total' ? totalLevel() : (mine ? mine.val : cd.p());
+
+    h += '<div class="card lbh">' +
+      '<div class="lbh-t">' + cd.ic + ' ' + cd.nm + '榜 <em>第 ' + myRank + ' / ' + rows.length + ' 名</em></div>' +
+      '<div class="lbh-d">' + cd.desc + ' ｜ 你的成绩 <b>' + fmt(total) + (cd.un ? ' ' + cd.un : '') + '</b></div>' +
+      '<div class="lbh-d dim">名次按你的实时数据即时重算，点任一行可查看对方档案。</div>' +
+      '</div>';
+
+    h += '<div class="card lbrows">';
+    for (var j = 0; j < rows.length; j++) {
+      var rw = rows[j];
+      var medal = rw.rank === 1 ? '🥇' : (rw.rank === 2 ? '🥈' : (rw.rank === 3 ? '🥉' : rw.rank));
+      h += '<div class="lbrow' + (rw.me ? ' me' : '') + (rw.rank <= 3 ? ' top' : '') + '" data-act="hero" data-a="' + rw.id + '">' +
+        '<span class="lbrk">' + medal + '</span>' +
+        '<span class="lbav">' + (rw.me ? '🐄' : '👤') + '</span>' +
+        '<span class="lbwho"><b>' + MUI.esc(rw.name) + '</b>' +
+        '<em>' + MUI.esc(rw.title || '') + (rw.guild ? ' · ' + MUI.esc(rw.guild) : '') + '</em></span>' +
+        '<span class="lbval">' + fmt(rw.val) + (cd.un ? '<i>' + cd.un + '</i>' : '') + '</span>' +
+        '<span class="lbgo">›</span></div>';
+    }
+    h += '</div>';
+    h += '<div class="dim" style="font-size:10px;padding:0 10px 6px">' +
+      '点击任意一行可查看对方的装备、工具与全部技能等级。</div>';
 
     h += '<div class="hd"><h3>世界频道</h3></div><div class="card chat">';
     var ch = S.chat || [];
@@ -1802,6 +1839,121 @@ var MUI = {
     h += '</div>';
     return h;
   },
+  /* ============================================================
+   *  玩家档案 · 独立全屏面板
+   *  展示对方（或自己）的装备、工具与全部技能等级。
+   * ============================================================ */
+  renderHero: function () {
+    var w = document.getElementById('mhero');
+    if (!w) return;
+    if (!MUI.heroId) { w.innerHTML = ''; w.style.display = 'none'; return; }
+    var d = heroOf(MUI.heroId);
+    if (!d) { w.innerHTML = ''; w.style.display = 'none'; MUI.heroId = null; return; }
+
+    /* 参照分数线：与自己对比才有意义 */
+    var me = heroOf('me');
+    var maxSk = 1, i, k;
+    for (i = 0; i < SKILLS.length; i++) {
+      if (SKILLS[i].id === 'combat') continue;
+      maxSk = Math.max(maxSk, d.skills[SKILLS[i].id] || 0, (me && me.skills[SKILLS[i].id]) || 0);
+    }
+    maxSk = Math.max(maxSk, 10);
+
+    var h = '<div class="hero-in">';
+
+    /* ---- 抬头 ---- */
+    h += '<div class="hero-top"><button class="hero-back" data-act="heroclose">‹ 返回</button>' +
+      '<b>' + MUI.esc(d.name) + '</b><span>' + (d.me ? '（你自己的档案）' : '离线模拟对手') + '</span></div>';
+
+    /* ---- 名片 ---- */
+    h += '<div class="hero-card">' +
+      '<div class="hero-av">' + (d.me ? '🐄' : '👤') + '</div>' +
+      '<div class="hero-meta"><div class="hero-nm">' + MUI.esc(d.name) + '</div>' +
+      '<div class="hero-tl">' + MUI.esc(d.title || '') + '</div>' +
+      '<div class="hero-gl">公会：' + MUI.esc(d.guild || '未加入公会') + '</div>' +
+      (d.me ? '' : ('<div class="hero-gl dim">' + (d.online ? '🟢 在线' : '⚪ 离线') + ' ｜ 入服 ' + d.days + ' 天</div>')) +
+      '</div>' +
+      '<div class="hero-kpi"><div><s>总等级</s><b>' + fmt(d.lvTotal) + '</b></div>' +
+      '<div><s>战斗</s><b>' + (Math.round(d.combatLv * 10) / 10) + '</b></div>' +
+      '<div><s>金币</s><b>' + fmt(d.gold) + '</b></div></div>' +
+      '</div>';
+
+    /* ---- 装备 ---- */
+    var eq = [], empty = [];
+    for (i = 0; i < SLOTS.length; i++) {
+      var sl = SLOTS[i], id = d.equip[sl.id];
+      var it = id ? ITEMS[id] : null;
+      var card = '<div class="hc' + (it ? '' : ' empty') + '">' +
+        '<div class="hci">' + (it ? it.icon : sl.ic) + (d.enh[sl.id] ? '<em>+' + d.enh[sl.id] + '</em>' : '') + '</div>' +
+        '<div class="hcn">' + (it ? it.name : sl.name) + '</div>' +
+        '<div class="hcs">' + (it ? MUI.statText(it) : '<span class="dim">空</span>') + '</div></div>';
+      if (it) eq.push(card); else empty.push(card);
+    }
+    h += '<div class="hero-sec"><h3>🛡️ 装备（' + eq.length + '/' + SLOTS.length + '）</h3><div class="hero-grid">' +
+      eq.join('') + empty.join('') + '</div></div>';
+
+    /* ---- 工具 ---- */
+    var toolId = d.equip['tool'], tool = toolId ? ITEMS[toolId] : null;
+    h += '<div class="hero-sec"><h3>🛠️ 工具</h3>';
+    if (tool) {
+      var effTxt = '';
+      if (tool.toolSkill && SKILL_MAP[tool.toolSkill]) effTxt = SKILL_MAP[tool.toolSkill].name + ' 效率 +' + (tool.eff || 0) + '%';
+      var eqTool = me && me.equip ? ITEMS[me.equip['tool']] : null;
+      h += '<div class="hero-tool">' +
+        '<div class="hti">' + tool.icon + (d.enh['tool'] ? '<em>+' + d.enh['tool'] + '</em>' : '') + '</div>' +
+        '<div class="htn"><b>' + tool.name + '</b><span class="dim"> ｜ ' + (tool.lvl ? '需要等级 ' + tool.lvl : '') + '</span>' +
+        '<div class="dim">' + (effTxt || '') + (effTxt && tool.tier != null ? '（第 ' + (tool.tier + 1) + '/7 档）' : '') + '</div>' +
+        (d.me ? '' : (eqTool ? ('<div class="dim">你的是：' + eqTool.name + '</div>') : '<div class="dim">你还没有装备工具</div>')) +
+        '</div></div>';
+    } else {
+      h += '<div class="card dim">暂未装备工具。</div>';
+    }
+    h += '</div>';
+
+    /* ---- 全部技能等级 ---- */
+    h += '<div class="hero-sec"><h3>📈 全部技能等级</h3><div class="hero-sk">';
+    for (i = 0; i < SKILLS.length; i++) {
+      var s = SKILLS[i];
+      if (s.id === 'combat') continue;
+      var lv = d.skills[s.id] || 0;
+      var mine = (me && me.skills[s.id]) || 0;
+      var diff = lv - mine;
+      var pct = Math.min(100, lv / maxSk * 100);
+      h += '<div class="hsk"><s>' + s.icon + ' ' + s.name + '</s>' +
+        '<span class="hskbar"><i style="width:' + pct.toFixed(1) + '%"></i></span>' +
+        '<b>' + lv + '</b>' +
+        (d.me ? '' : '<em class="' + (diff > 0 ? 'up' : (diff < 0 ? 'dn' : '')) + '">' +
+          (diff > 0 ? '+' + diff : (diff < 0 ? diff : '持平')) + '</em>') +
+        '</div>';
+    }
+    h += '</div></div>';
+
+    /* ---- 战斗素养 ---- */
+    var SUB7 = ['stamina', 'intelligence', 'attack', 'defense', 'melee', 'ranged', 'magic'];
+    var SUB7NM = { stamina: '体力', intelligence: '智力', attack: '攻击', defense: '防御', melee: '近战', ranged: '远程', magic: '魔法' };
+    if (d.subs) {
+      h += '<div class="hero-sec"><h3>⚔️ 战斗素养</h3><div class="hero-subs">';
+      for (k = 0; k < SUB7.length; k++) {
+        var sv = d.subs[SUB7[k]] || 0;
+        var mv = (me && me.subs && me.subs[SUB7[k]]) || 0;
+        var df2 = sv - mv;
+        h += '<div class="hsub"><s>' + SUB7NM[SUB7[k]] + '</s><b>' + sv + '</b>' +
+          (d.me ? '' : '<em class="' + (df2 > 0 ? 'up' : (df2 < 0 ? 'dn' : '')) + '">' +
+            (df2 > 0 ? '+' + df2 : (df2 < 0 ? df2 : '持平')) + '</em>') + '</div>';
+      }
+      h += '</div></div>';
+    }
+
+    if (!d.me) {
+      h += '<div class="hero-sec"><button class="wide gold" data-act="heroclose">返回排行榜</button></div>';
+    }
+    h += '</div>';
+
+    w.innerHTML = h;
+    w.style.display = 'block';
+    w.scrollTop = 0;
+  },
+
   leaderboard: function (me) {
     var arr = [];
     for (var i = 0; i < 14; i++) {

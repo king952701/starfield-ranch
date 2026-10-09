@@ -54,6 +54,9 @@ const UI = {
       case 'bankcat': UI.bankCat = x; UI.dirty = true; break;
       case 'guild-join': UI.joinGuild(x); break;
       case 'guild-leave': S.guild = null; UI.dirty = true; break;
+      case 'lbcat': UI.lbCat = x; UI.dirty = true; break;
+      case 'hero': if (x && heroOf(x)) { UI.heroId = x; UI.scrollTop && UI.scrollTop(); UI.dirty = true; } break;
+      case 'heroclose': UI.heroId = null; UI.dirty = true; break;
       case 'wipe': if (confirm('确定清空存档并重新开始？')) { wipeSave(); location.reload(); } break;
       case 'save': saveGame(); UI.toast('已保存'); break;
       case 'open-chest': UI.openChest(x); break;

@@ -276,6 +276,320 @@ body {
 .volsl { display: inline-block; width: 100%; max-width: 150px; vertical-align: middle; }
 .volsl input { display: block; width: 100%; }
 
+/* ---------- 排行榜：类别切换 ---------- */
+.lbtabs {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-overflow-scrolling: touch;
+  overflow-x: auto;
+  padding: 6px 8px;
+  white-space: nowrap;
+}
+.lbtab {
+  -webkit-flex: 0 0 auto;
+  flex: 0 0 auto;
+  margin-right: 5px;
+  padding: 4px 9px;
+  border: 1px solid #2b3358;
+  border-radius: 12px;
+  background: #101730;
+  color: #8892b8;
+  font-size: 11px;
+}
+.lbtab i { font-style: normal; margin-right: 3px; }
+.lbtab.on { background: #2a2211; border-color: #b98b2a; color: #f2c14e; }
+
+.lbh { padding: 8px 10px; }
+.lbh-t { font-size: 13px; color: #dbe2f5; }
+.lbh-t em { font-style: normal; margin-left: 5px; color: #f2c14e; font-size: 11px; }
+.lbh-d { font-size: 11px; color: #8892b8; margin-top: 2px; }
+.lbh-d b { color: #f2c14e; }
+
+.lbrows { padding: 4px 6px; }
+.lbrow {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-box-align: center;
+  -webkit-align-items: center;
+  align-items: center;
+  padding: 6px 4px;
+  border-bottom: 1px solid #1a2138;
+}
+.lbrow:last-child { border-bottom: 0; }
+.lbrow.top { background: rgba(242, 193, 78, .05); }
+.lbrow.me { background: rgba(109, 220, 156, .07); border-left: 2px solid #6ddc9c; }
+.lbrk {
+  -webkit-flex: 0 0 auto;
+  flex: 0 0 auto;
+  width: 22px;
+  text-align: center;
+  font-size: 11px;
+  color: #8892b8;
+}
+.lbav {
+  -webkit-flex: 0 0 auto;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  line-height: 26px;
+  margin-right: 6px;
+  text-align: center;
+  font-size: 15px;
+  background: #131b36;
+  border: 1px solid #2b3358;
+  border-radius: 50%;
+}
+.lbwho {
+  -webkit-box-flex: 1;
+  -webkit-flex: 1 1 auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+.lbwho b {
+  display: block;
+  font-size: 12px;
+  color: #dbe2f5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lbwho em {
+  display: block;
+  font-style: normal;
+  font-size: 9px;
+  color: #6f7ba3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lbval { -webkit-flex: 0 0 auto; flex: 0 0 auto; margin: 0 4px; color: #f2c14e; font-size: 12px; }
+.lbval i { font-style: normal; font-size: 9px; color: #8892b8; margin-left: 1px; }
+.lbgo { -webkit-flex: 0 0 auto; flex: 0 0 auto; color: #4b5578; font-size: 15px; }
+
+/* ---------- 玩家档案：独立全屏面板 ---------- */
+.hero-page {
+  display: none;
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  background: #080d1c;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.hero-in { padding: 8px 8px 24px; }
+.hero-top {
+  position: relative;
+  padding: 8px 6px 10px;
+  text-align: center;
+  border-bottom: 1px solid #1a2138;
+}
+.hero-top b { font-size: 14px; color: #dbe2f5; }
+.hero-top span { display: block; font-size: 10px; color: #6f7ba3; }
+.hero-back {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  padding: 4px 10px;
+  border: 1px solid #2b3358;
+  border-radius: 10px;
+  background: #101730;
+  color: #8892b8;
+  font-size: 12px;
+}
+.hero-card {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  -webkit-box-align: center;
+  -webkit-align-items: center;
+  align-items: center;
+  background: #0e1428;
+  border: 1px solid #232c50;
+  border-radius: 12px;
+  padding: 10px;
+  margin-top: 8px;
+}
+.hero-av {
+  -webkit-flex: 0 0 auto;
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  line-height: 46px;
+  margin-right: 9px;
+  text-align: center;
+  font-size: 26px;
+  background: #131b36;
+  border: 1px solid #2b3358;
+  border-radius: 50%;
+}
+.hero-meta { -webkit-box-flex: 1; -webkit-flex: 1 1 auto; flex: 1 1 auto; min-width: 0; }
+.hero-nm { font-size: 15px; color: #dbe2f5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hero-tl { font-size: 10px; color: #f2c14e; }
+.hero-gl { font-size: 10px; color: #8892b8; }
+.hero-kpi { -webkit-flex: 0 0 100%; flex: 0 0 100%; display: -webkit-box; display: -webkit-flex; display: flex; margin-top: 8px; }
+.hero-kpi > div {
+  -webkit-box-flex: 1;
+  -webkit-flex: 1 1 0;
+  flex: 1 1 0;
+  text-align: center;
+  border-left: 1px solid #1a2138;
+}
+.hero-kpi > div:first-child { border-left: 0; }
+.hero-kpi s { display: block; font-size: 10px; color: #6f7ba3; text-decoration: none; }
+.hero-kpi b { display: block; font-size: 13px; color: #f2c14e; }
+
+.hero-sec { margin-top: 12px; }
+.hero-sec > h3 { font-size: 12px; color: #f2c14e; margin: 0 0 6px; font-weight: 400; }
+.hero-grid { display: -webkit-box; display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; }
+.hc {
+  width: 33.33%;
+  padding: 5px 3px;
+  text-align: center;
+  background: #0e1428;
+  border: 1px solid #1f2745;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+}
+.hc.empty { opacity: .45; }
+.hci {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  line-height: 34px;
+  margin: 0 auto 3px;
+  background: #131b36;
+  border: 1px solid #2b3358;
+  border-radius: 8px;
+  font-size: 18px;
+}
+.hci em {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  padding: 0 3px;
+  border-radius: 5px;
+  background: #2a2211;
+  border: 1px solid #b98b2a;
+  color: #f2c14e;
+  font-style: normal;
+  font-size: 8px;
+  line-height: 12px;
+}
+.hcn { font-size: 10px; color: #dbe2f5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hcs { font-size: 8px; color: #6f7ba3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.hero-tool {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-box-align: center;
+  -webkit-align-items: center;
+  align-items: center;
+  background: #0e1428;
+  border: 1px solid #232c50;
+  border-radius: 10px;
+  padding: 8px;
+}
+.hti {
+  position: relative;
+  -webkit-flex: 0 0 auto;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  line-height: 40px;
+  margin-right: 9px;
+  text-align: center;
+  font-size: 21px;
+  background: #131b36;
+  border: 1px solid #2b3358;
+  border-radius: 8px;
+}
+.hti em {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  padding: 0 3px;
+  border-radius: 5px;
+  background: #2a2211;
+  border: 1px solid #b98b2a;
+  color: #f2c14e;
+  font-style: normal;
+  font-size: 8px;
+  line-height: 12px;
+}
+.htn { -webkit-box-flex: 1; -webkit-flex: 1 1 auto; flex: 1 1 auto; min-width: 0; font-size: 12px; }
+
+.hero-sk { background: #0e1428; border: 1px solid #232c50; border-radius: 10px; padding: 6px 8px; }
+.hsk {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-box-align: center;
+  -webkit-align-items: center;
+  align-items: center;
+  padding: 3px 0;
+}
+.hsk s {
+  -webkit-flex: 0 0 auto;
+  flex: 0 0 auto;
+  width: 74px;
+  font-size: 11px;
+  color: #b8c2e0;
+  text-decoration: none;
+}
+.hskbar {
+  -webkit-box-flex: 1;
+  -webkit-flex: 1 1 auto;
+  flex: 1 1 auto;
+  height: 6px;
+  margin: 0 6px;
+  background: #080d1c;
+  border: 1px solid #232c50;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.hskbar i {
+  display: block;
+  height: 100%;
+  background: -webkit-linear-gradient(left, #8a6b1f, #f2c14e);
+  background: linear-gradient(90deg, #8a6b1f, #f2c14e);
+}
+.hsk b { -webkit-flex: 0 0 auto; flex: 0 0 auto; width: 30px; text-align: right; font-size: 11px; color: #f2c14e; }
+.hsk em {
+  -webkit-flex: 0 0 auto;
+  flex: 0 0 auto;
+  width: 40px;
+  text-align: right;
+  font-style: normal;
+  font-size: 9px;
+  color: #6f7ba3;
+}
+.hsk em.up { color: #f26d6d; }
+.hsk em.dn { color: #6ddc9c; }
+
+.hero-subs { display: -webkit-box; display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; }
+.hsub {
+  width: 33.33%;
+  text-align: center;
+  padding: 5px 0;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  border-bottom: 1px solid #1a2138;
+}
+.hsub s { display: block; font-size: 10px; color: #6f7ba3; text-decoration: none; }
+.hsub b { font-size: 13px; color: #dbe2f5; }
+.hsub em { display: block; font-style: normal; font-size: 9px; color: #6f7ba3; }
+.hsub em.up { color: #f26d6d; }
+.hsub em.dn { color: #6ddc9c; }
+
 /* ---------- 关于 / 致谢 ---------- */
 .abt {
   padding: 6px 0;
