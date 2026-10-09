@@ -80,6 +80,49 @@ function queueAction(skill, actId, n) {
   UI.dirty = true;
 }
 
+/* ============================================================
+ *  成就：领取奖励 / 一键领取 / 总览
+ * ============================================================ */
+function claimAch(id) {
+  if (!ITEMS[id] || !achCanClaim(id)) return false;
+  const lv = achCur(id);
+  const r = achReward(id, lv);
+  addGold(r.gold);
+  if (r.gem) addItem('gem', r.gem);
+  if (r.tokens) S.tokens = (S.tokens || 0) + r.tokens;
+  if (r.cowbell) S.cowbell = (S.cowbell || 0) + r.cowbell;
+  if (!S.ach[id]) S.ach[id] = { lv: 0 };
+  S.ach[id].lv = lv + 1;
+  pushLog('🏆 成就 ' + ITEMS[id].name + ' 第 ' + (lv + 1) + ' 档达成：' + achRewardText(r));
+  UI.dirty = true;
+  UI.toast('🏆 ' + ITEMS[id].name + ' ' + achRewardText(r));
+  return true;
+}
+function claimAllAch() {
+  let got = 0, gold = 0;
+  for (let i = 0; i < ITEM_LIST.length; i++) {
+    const id = ITEM_LIST[i].id;
+    if (!achCanClaim(id)) continue;
+    const gr = achReward(id, achCur(id)).gold;
+    if (claimAch(id)) { got++; gold += gr; }
+  }
+  UI.toast(got ? ('🏆 一键领取 ' + got + ' 项成就，+' + fmt(gold) + ' 金币') : '暂时没有可领取的成就');
+  return got;
+}
+function achSummary() {
+  let total = 0, claimed = 0, ready = 0, allDone = 0, tracking = 0;
+  for (let i = 0; i < ITEM_LIST.length; i++) {
+    const id = ITEM_LIST[i].id;
+    const mx = achMaxStage(id), lv = achStage(id);
+    total += mx;
+    claimed += Math.min(lv, mx);
+    if (achCanClaim(id)) ready++;
+    if (lv >= mx) allDone++;
+    if (achProg(id) > 0) tracking++;
+  }
+  return { total: total, claimed: claimed, ready: ready, allDone: allDone, tracking: tracking, kinds: ITEM_LIST.length };
+}
+
 /* ---------- 工作队列：置顶 / 插入指定槽位 / 上下移动 / 解锁 ---------- */
 function mkQ(skill, actId, n) { return { skill: skill, actId: actId, n: n == null ? 1 : n }; }
 

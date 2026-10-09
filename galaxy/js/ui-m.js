@@ -33,8 +33,12 @@ var MUI = {
     ['skill', '技能', '🧺'], ['queue', '队列', '⏳'], ['combat', '战斗', '⚔️'], ['bag', '背包', '🎒'],
     ['equip', '装备', '🛡️'], ['mastery', '专精', '✦'], ['task', '任务', '📜'],
     ['market', '拍卖', '🏪'], ['vendor', '商人', '💱'], ['house', '牧场', '🏠'],
-    ['social', '社交', '🌐'], ['stats', '统计', '📊']
+    ['social', '社交', '🌐'], ['ach', '成就', '🏆'], ['stats', '统计', '📊']
   ],
+  /* 成就面板 */
+  achCat: 'all',
+  achFilter: 'doing',   /* doing | ready | done | all */
+  achQ: '',
 
   init: function () {
     document.addEventListener('click', MUI.onClick, false);
@@ -310,6 +314,18 @@ var MUI = {
     else if (a === 'qup') { queueMove(parseInt(x, 10), -1); }
     else if (a === 'qdown') { queueMove(parseInt(x, 10), 1); }
     else if (a === 'qunlock') { queueUnlock(); }
+    /* ---- 成就 ---- */
+    else if (a === 'achclaim') { claimAch(x); }
+    else if (a === 'achclaimall') { claimAllAch(); }
+    else if (a === 'achcat') { MUI.achCat = x; MUI.dirty = true; }
+    else if (a === 'achfilter') { MUI.achFilter = x; MUI.dirty = true; }
+    else if (a === 'achsearch') {
+      var bx = document.getElementById('achbox');
+      MUI.achQ = bx ? (bx.value || '') : '';
+      if (MUI.achQ && MUI.achFilter === 'doing') MUI.achFilter = 'all';
+      MUI.dirty = true;
+    }
+    else if (a === 'achqclear') { MUI.achQ = ''; MUI.dirty = true; }
     else if (a === 'combat-start') { if (!S.combat || !S.combat.active) Combat.start(x); else Combat.stop(); }
     else if (a === 'combat-stop') { Combat.stop(); }
     else if (a === 'heal') { Combat.healFull(); }
@@ -403,6 +419,7 @@ var MUI = {
     if (s === 'alch') { S.alchTarget = el.value; MUI.dirty = true; }
     else if (s === 'bagq') { MUI.bankQ = parseInt(el.value, 10); if (isNaN(MUI.bankQ)) MUI.bankQ = -1; MUI.dirty = true; }
     else if (s === 'ah-item') { MUI.ahItem = el.value; MUI.dirty = true; }
+    else if (s === 'ach-q') { MUI.achQ = el.value || ''; MUI.dirty = true; }
     else if (s === 'ah-q') { MUI.ahQ = el.value || ''; MUI.dirty = true; }
     else if (s === 'ah-sort') { MUI.ahSort = el.value; MUI.dirty = true; }
     else if (s === 'ah-qty') {
@@ -620,6 +637,7 @@ var MUI = {
     if (t === 'vendor') return MUI.pVendor();
     if (t === 'house') return MUI.pHouse();
     if (t === 'social') return MUI.pSocial();
+    if (t === 'ach') return MUI.pAch();
     if (t === 'stats') return MUI.pStats();
     return '';
   },
@@ -763,6 +781,112 @@ var MUI = {
         (i === 1 ? '队列 #1（优先）' : '队列 #' + i) + '</option>';
     }
     return o;
+  },
+
+  /* -------- 成就殿堂 -------- */
+  pAch: function () {
+    var i, it, id, lv, prog, goal, ready, doneAll;
+    var sm = achSummary();
+    var h = '';
+
+    /* ---- 概览 ---- */
+    h += '<div class="card"><div class="skhd">' +
+      '<span class="ic">🏆</span><span><div class="nm">成就殿堂</div>' +
+      '<div class="ds">' + sm.kinds + ' 件物品各有成就链 ｜ 已领 ' + sm.claimed + '/' + sm.total +
+      ' 档 ｜ 全达成 ' + sm.allDone + ' 件</div></span>' +
+      '<span class="lv">' + sm.ready + '<em>待领</em></span></div>';
+    if (sm.ready) {
+      h += '<button class="wide gold" data-act="achclaimall">🎁 一键领取全部 ' + sm.ready + ' 项奖励</button>';
+    } else {
+      h += '<div class="dim" style="font-size:11px">达标的成就这里会出现一键领取按钮；' +
+        '想看还没动过的物品，把筛选切到「全部物品」。</div>';
+    }
+    h += '</div>';
+
+    /* ---- 分类 ---- */
+    h += '<div class="bagnav">';
+    for (i = 0; i < BAG_CATS.length; i++) {
+      var c = BAG_CATS[i];
+      h += '<div class="bagt' + (MUI.achCat === c.id ? ' on' : '') + '" data-act="achcat" data-a="' + c.id + '">' +
+        '<i>' + c.ic + '</i><s>' + c.name + '</s></div>';
+    }
+    h += '</div>';
+
+    /* ---- 搜索 + 筛选 ---- */
+    h += '<div class="ahsrch">' +
+      '<input id="achbox" class="inp" type="text" placeholder="输入物品名…" value="' + MUI.esc(MUI.achQ) + '">' +
+      '<button class="mini" data-act="achsearch">搜索</button>' +
+      '<button class="mini" data-act="achqclear">✕</button>' +
+      '</div>';
+    var fl = [['doing', '进行中'], ['ready', '待领取'], ['done', '已全达成'], ['all', '全部物品']];
+    h += '<div class="chips2">';
+    for (i = 0; i < fl.length; i++) {
+      h += '<span class="chip' + (MUI.achFilter === fl[i][0] ? ' on' : '') + '" data-act="achfilter" data-a="' +
+        fl[i][0] + '">' + fl[i][1] + '</span>';
+    }
+    h += '</div>';
+
+    /* ---- 收集列表 ---- */
+    var list = [];
+    for (i = 0; i < ITEM_LIST.length; i++) {
+      it = ITEM_LIST[i]; id = it.id;
+      if (MUI.achCat !== 'all' && bagCatOf(id) !== MUI.achCat) continue;
+      if (MUI.achQ && it.name.indexOf(MUI.achQ) < 0) continue;
+      lv = achCur(id);
+      prog = achProg(id);
+      ready = achCanClaim(id);
+      doneAll = lv < 0;
+      if (MUI.achFilter === 'ready' && !ready) continue;
+      if (MUI.achFilter === 'done' && !doneAll) continue;
+      if (MUI.achFilter === 'doing' && (ready || doneAll || prog <= 0)) continue;
+      if (MUI.achFilter === 'all' && prog <= 0 && doneAll) continue;
+      goal = doneAll ? achGoal(id, achMaxStage(id) - 1) : achGoal(id, lv);
+      list.push({
+        it: it, lv: lv, prog: prog, goal: goal, ready: ready, doneAll: doneAll,
+        pct: Math.min(1, prog / goal)
+      });
+    }
+    list.sort(function (a2, b2) {
+      if (a2.ready !== b2.ready) return a2.ready ? -1 : 1;
+      if (a2.doneAll !== b2.doneAll) return a2.doneAll ? 1 : -1;
+      if (b2.pct !== a2.pct) return b2.pct - a2.pct;
+      return a2.goal - b2.goal;
+    });
+
+    h += '<div class="hd"><h3>成就清单（' + list.length + ' 项）</h3></div>';
+    if (!list.length) {
+      h += '<div class="card dim">没有符合条件的成就 —— 换个分类或筛选试试。' +
+        (sm.ready ? ('（有 <b>' + sm.ready + '</b> 项已达标待领取，切到「待领取」或回到概览点一键领取）') : '') +
+        '</div>';
+      return h;
+    }
+    var show = Math.min(list.length, 120);
+    for (i = 0; i < show; i++) {
+      var r = list[i];
+      var rw = achReward(r.it.id, r.doneAll ? achMaxStage(r.it.id) - 1 : r.lv);
+      var stageTxt = r.doneAll ? ('全 ' + achMaxStage(r.it.id) + ' 档达成') :
+        ('第 ' + (r.lv + 1) + '/' + achMaxStage(r.it.id) + ' 档');
+      h += '<div class="achrow' + (r.ready ? ' ready' : '') + (r.doneAll ? ' done' : '') + '">' +
+        '<span class="achi" data-item="' + r.it.id + '">' + (r.it.icon || '📦') + '</span>' +
+        '<span class="achm">' +
+        '<div class="acht">' + r.it.name + '<em>' + stageTxt + '</em></div>' +
+        '<div class="achbar"><i style="width:' + (r.pct * 100).toFixed(1) + '%"></i></div>' +
+        '<div class="achg">' + fmt(r.prog) + ' / ' + fmt(r.goal) + ' 件' +
+        '<span class="dim"> ｜ 奖励 ' + achRewardText(rw) + '</span></div>' +
+        '</span>' +
+        '<span class="achb">' +
+        (r.ready ? '<button class="mini gold" data-act="achclaim" data-a="' + r.it.id + '">领取</button>'
+          : (r.doneAll ? '<b class="ok">✓</b>' : '<span class="dim">' + (r.pct * 100).toFixed(0) + '%</span>')) +
+        '</span></div>';
+    }
+    if (show < list.length) {
+      h += '<div class="card dim">还有 ' + (list.length - show) + ' 项未展示 —— 用搜索或分类缩小范围。</div>';
+    }
+    return h;
+  },
+  esc: function (s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   },
 
   /* -------- 工作队列面板 -------- */

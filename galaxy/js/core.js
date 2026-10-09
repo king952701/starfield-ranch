@@ -74,6 +74,7 @@ function newGame(name) {
   S.combat = null; S.action = null;
   S.queue = [];
   S.queueSlots = Q_SLOT_DEFAULT;
+  S.ach = {}; S.achSt = {};
   S.houses = {}; HOUSES.forEach(function (h) { S.houses[h.id] = 0; });
   S.stats = { kills: 0, deaths: 0, actions: 0, earned: 0, spent: 0, crafted: 0, offline: 0 };
   S.lastTask = Date.now();
@@ -91,6 +92,8 @@ function addItem(id, n) {
   n = n || 1;
   if (!ITEMS[id]) return 0;
   S.bank[id] = (S.bank[id] || 0) + n;
+  if (!S.achSt) S.achSt = {};
+  S.achSt[id] = (S.achSt[id] || 0) + n;   /* 成就用：累计获得数，不随消耗减少 */
   UI.dirty = true;
   return n;
 }
@@ -340,6 +343,68 @@ const BAG_CATS = [
 ];
 
 /* ============================================================
+ *  成就系统
+ *  游戏里每一个物品都有一条成就链：累计产出达标 → 领取 → 升级下一档。
+ *  目标数量按物品的 tier 与获取难度测算（越稀有要求越少），
+ *  奖励随档位递增，且必须"确定"。
+ * ============================================================ */
+const ACH_MULT = [1, 10, 100, 1000];      /* 各档目标相对基准的倍数 */
+
+/* 该物品成就链有几档 */
+function achStages(id) {
+  const it = ITEMS[id];
+  if (!it) return 1;
+  if (it.cat === 'equip') return 3;
+  if (it.cat === 'food' || it.cat === 'drink') return 3;
+  return 4;
+}
+/* 基准目标量：按 tier 越高要求越少 */
+function achBase(id) {
+  const it = ITEMS[id];
+  if (!it) return 100;
+  const t = (typeof it.tier === 'number' && it.tier > 0) ? it.tier : 0;
+  if (it.cat === 'equip') return Math.max(1, Math.round(24 / (1 + t * 0.8)));
+  if (it.cat === 'food' || it.cat === 'drink') return Math.max(10, Math.round(60 / (1 + t * 0.5)));
+  return Math.max(5, Math.round(100 / (1 + t * 0.75)));
+}
+function achGoal(id, lv) {
+  const m = ACH_MULT[lv] != null ? ACH_MULT[lv] : Math.round(1000 * Math.pow(10, lv - 3));
+  return Math.max(1, Math.round(achBase(id) * m));
+}
+function achProg(id) { return (S.achSt && S.achSt[id]) || 0; }
+function achStage(id) { return (S.ach && S.ach[id] && S.ach[id].lv) || 0; }
+function achMaxStage(id) { return achStages(id); }
+function achAllDone(id) { return achStage(id) >= achMaxStage(id); }
+/* 当前正在挑战的档位索引（-1 = 全部完成） */
+function achCur(id) {
+  const lv = achStage(id);
+  return lv >= achMaxStage(id) ? -1 : lv;
+}
+function achCanClaim(id) {
+  const lv = achCur(id);
+  if (lv < 0) return false;
+  return achProg(id) >= achGoal(id, lv);
+}
+/* 奖励：与档位 + 品质挂钩，确定性生成 */
+function achReward(id, lv) {
+  const q = qualityOf(id);
+  return {
+    gold: Math.round(200 * Math.pow(10, lv) * (1 + q * 0.45)),
+    gem: lv >= 1 ? lv : 0,          /* 💠 钻石（星辉宝石） */
+    tokens: Math.floor(lv / 2),
+    cowbell: lv >= 2 ? 1 : 0
+  };
+}
+function achRewardText(r) {
+  const p = [];
+  if (r.gold) p.push('💰' + fmt(r.gold) + ' 金币');
+  if (r.gem) p.push('💠' + r.gem + ' 钻石');
+  if (r.tokens) p.push('🎟' + r.tokens);
+  if (r.cowbell) p.push('🔔' + r.cowbell);
+  return p.join(' + ');
+}
+
+/* ============================================================
  *  工作队列槽位
  *  初始 3 格，最多 8 格；解锁要同时消耗金币与物资，
  *  把过剩产出回收成"进度"，拉长养成周期。
@@ -387,6 +452,8 @@ function loadGame() {
     COMBAT_SUBS.forEach(function (c) { if (S.subs[c.id] == null) S.subs[c.id] = 0; });
     if (typeof S.queueSlots !== 'number') S.queueSlots = Q_SLOT_DEFAULT;   /* 老存档迁移 */
     if (!S.queue) S.queue = [];
+    if (!S.ach) S.ach = {};          /* 成就：每条链的等级 */
+    if (!S.achSt) S.achSt = {};      /* 成就：每物品累计获得数 */
     if (!S.stats) S.stats = { kills: 0, deaths: 0, actions: 0, earned: 0, spent: 0, crafted: 0, offline: 0 };
     return true;
   } catch (e) { return false; }
