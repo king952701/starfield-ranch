@@ -70,6 +70,8 @@ const UI = {
     case 'bu-restore': UI.buRestoreAsk = x; UI.dirty = true; break;
     case 'bu-restore-cancel': UI.buRestoreAsk = -1; UI.dirty = true; break;
     case 'bu-restore-ok': Backup.restoreSnap(+x); UI.buRestoreAsk = -1; UI.dirty = true; break;
+    case 'talent-pick': if (window.Talents) Talents.pick(x); UI.dirty = true; break;
+    case 'talent-reset': if (window.Talents) Talents.reset(); UI.dirty = true; break;
     case 'tut-restart': Tutorial.restart(); break;
     case 'tut-skip': Tutorial.skipAll(); break;
     case 'tut-goto': UI.tab = x; UI.dirty = true; break;
@@ -183,8 +185,8 @@ const UI = {
     const t = [
       ['skill', '技能', '🧺'], ['combat', '战斗', '⚔️'], ['equip', '装备', '🛡️'],
       ['bank', '银行', '🎒'], ['mastery', '专精', '✦'], ['market', '市场', '🏪'],
-      ['task', '任务', '📜'], ['house', '牧场', '🏠'], ['social', '社交', '🌐'], ['stats', '统计', '📊'],
-      ['about', '关于', 'ℹ️']
+      ['task', '任务', '📜'], ['house', '牧场', '🏠'], ['social', '社交', '🌐'], ['talent', '天赋', '🌳'],
+      ['stats', '统计', '📊'], ['about', '关于', 'ℹ️']
     ];
     document.getElementById('tabs').innerHTML = t.map(function (x) {
       return '<div class="tab' + (UI.tab === x[0] ? ' on' : '') + '" data-act="tab" data-a="' + x[0] + '">' + x[2] + '<span>' + x[1] + '</span></div>';
@@ -334,6 +336,7 @@ const UI = {
       case 'house': return UI.pHouse();
       case 'social': return UI.pSocial();
       case 'stats': return UI.pStats();
+      case 'talent': return UI.pTalent();
       case 'about': return UI.pAbout();
     }
     return '';

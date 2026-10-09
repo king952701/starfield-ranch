@@ -468,6 +468,15 @@ Object.assign(UI, {
     if (b) b.onclick = function () { w.style.display = 'none'; };
   },
 
+  /* ---------- 天赋树 ---------- */
+  pTalent: function () {
+    if (!window.Talents) return '<div class="card"><p>天赋模块未加载</p></div>';
+    const B = '<div class="card"><p style="font-size:12px;line-height:1.8">' +
+      '<b>星海天赋树</b>——每层三选一，点数有限，你的取舍就是你的流派。<br>' +
+      '点数来源：开局 1 点，之后总等级每 8 级 +1 点、每 40 级再 +1 点。</p></div>';
+    return B + Talents.html();
+  },
+
   /* ---------- 玩家档案（内联展开） ---------- */
   heroBlock: function (id) {
     const d = heroOf(id);

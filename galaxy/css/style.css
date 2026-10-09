@@ -335,3 +335,26 @@ button.big{display:block;width:100%;margin-top:14px;padding:10px;font-size:14px;
   #left{display:none}
   .subs{grid-template-columns:repeat(4,1fr)}
 }
+
+/* ---------- 天赋树 ---------- */
+.tlp { font-size:12px; color:#b8c2e0; padding:8px 10px; background:#0d132a; border:1px solid #232c50; border-radius:9px; margin-bottom:8px; }
+.tlp b { color:#f2c14e; font-size:14px; }
+.tl-need { color:#8892b8; }
+.tl-tree { background:#0d132a; border:1px solid #232c50; border-radius:11px; padding:9px; margin-bottom:9px; }
+.tl-th { display:flex; align-items:center; gap:7px; padding-bottom:6px; border-bottom:1px solid #1a2138; margin-bottom:6px; }
+.tl-ic { font-size:17px; }
+.tl-th b { font-size:13px; color:#f2c14e; }
+.tl-th s { font-size:10px; color:#8892b8; text-decoration:none; }
+.tl-row { margin-bottom:6px; }
+.tl-row.cap { padding-top:5px; border-top:1px dashed #232c50; }
+.tl-tier { font-size:9px; color:#6b7699; margin-bottom:3px; letter-spacing:1px; }
+.tl-n { background:#080d1c; border:1px solid #232c50; border-radius:8px; padding:7px 8px; margin-bottom:5px; cursor:pointer; }
+.tl-n:hover { border-color:#3a4570; }
+.tl-n.lock { opacity:0.45; cursor:default; }
+.tl-n.on { border-color:#b98b2a; background:linear-gradient(180deg, rgba(242,193,78,0.10), rgba(13,19,42,0.9)); }
+.tl-nh { display:flex; align-items:center; gap:6px; }
+.tl-nh i { font-style:normal; font-size:14px; }
+.tl-nh b { font-size:12px; color:#e9edfb; }
+.tl-nh u { margin-left:auto; font-size:9px; color:#f2c14e; text-decoration:none; }
+.tl-nd { font-size:11px; color:#a3adc9; line-height:1.6; margin-top:2px; }
+.tl-nlock { font-size:10px; color:#6b7699; margin-top:2px; }

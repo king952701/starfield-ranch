@@ -22,6 +22,11 @@ var MGame = {
     if (!loaded) { MGame.showStart(); return; }
     /* 每日首次启动留一份本机快照，同一天不重复 */
     if (window.Backup) Backup.dailySnapshot();
+    /* 新开的「天赋」页需要被看见：有点数没花时提醒一次 */
+    if (window.Talents && !S.flags.talentHint && Talents.availPoints() > 0) {
+      S.flags.talentHint = 1;
+      pushLog('🌳 天赋树已开放：在「天赋」页点亮你的第一个节点');
+    }
 
     /* 首次进入：按存档时间补算离线收益 */
     var elapsed = (Date.now() - (S.savedAt || Date.now())) / 1000;

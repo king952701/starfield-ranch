@@ -9,6 +9,13 @@ function actionTime(skill, a) {
   if (skill === 'enhancing') spd += equipAgg().enhanceSpeed / 100;
   const ml = masteryLevel(skill, a.id);
   spd += ml * 0.001;
+  /* 天赋「堆垛」：连续执行同一动作时逐次提速 */
+  if (window.Talents) {
+    const X = window.Talents.extras();
+    if (X.bulk > 0 && S.talentStreak && S.talentStreak.k === skill + ':' + a.id) {
+      spd += Math.min(X.bulk * S.talentStreak.n, 0.15);
+    }
+  }
   return Math.max(0.3, a.time / Math.max(0.2, spd));
 }
 
@@ -33,7 +40,11 @@ function canStart(q) {
   return { ok: true };
 }
 
-function enhanceCost(cur) { return Math.round(2 + cur * 3); }
+function enhanceCost(cur) {
+  let n = 2 + cur * 3;
+  if (window.Talents) n *= window.Talents.extras().enhCostMul;   /* 天赋「节用」 */
+  return Math.max(1, Math.round(n));
+}
 
 function consumeFor(a) {
   if (a.kind === 'enhance') { takeItems({ essence: enhanceCost(S.enhance[a.slot] || 0) }); return true; }
@@ -216,7 +227,12 @@ function addXp(skill, amt) {
 
 function addSubXp(sub, amt) {
   const B = bonuses();
-  S.subs[sub] = Math.min(XP_CAP, (S.subs[sub] || 0) + amt * (1 + B.xp + B.wisdom));
+  let mul = 1 + B.xp + B.wisdom;
+  if (window.Talents) {
+    const X = window.Talents.extras();
+    if (X.subXp) mul += X.subXp;                                /* 天赋「荣誉展品」 */
+  }
+  S.subs[sub] = Math.min(XP_CAP, (S.subs[sub] || 0) + amt * mul);
 }
 
 function masteryGain(skill, a) {
@@ -235,6 +251,8 @@ function completeAction() {
   if (!a) { S.action = null; return; }
   const B = bonuses();
   const sk = act.skill;
+  /* 天赋的规则类效果（非 bonuses 体系），未点天赋时全部为中性值 */
+  const X0 = window.Talents ? window.Talents.extras() : null;
   let burned = false; /* 采集/烹饪分支里赋值，函数尾部 addXp 会用到 */
 
   if (a.kind === 'enhance') {
@@ -242,22 +260,24 @@ function completeAction() {
     const cur = S.enhance[sl] || 0;
     const lvl = skillLevel('enhancing');
     const ml = masteryLevel('enhancing', a.id);
-    const chance = Math.min(0.95, 0.55 + lvl * 0.008 + ml * 0.003 - cur * 0.05);
+    const chance = Math.min(0.95, 0.55 + lvl * 0.008 + ml * 0.003 - cur * 0.05 + (X0 ? X0.enhAdd : 0));
     if (Math.random() < chance) {
       S.enhance[sl] = cur + 1;
       pushLog('✔ 强化成功！' + ITEMS[S.equip[sl]].name + ' → +' + S.enhance[sl]);
       sfxEvt('equip'); sfxEvt('shield');
     } else {
-      S.enhance[sl] = 0;
-      pushLog('✖ 强化失败，' + ITEMS[S.equip[sl]].name + ' 退回 +0');
+      /* 天赋「不灭炉火」：失败只退回一半等级，不再清零 */
+      const keep = X0 && X0.enhKeep ? Math.floor(cur / 2) : 0;
+      S.enhance[sl] = keep;
+      pushLog('✖ 强化失败，' + ITEMS[S.equip[sl]].name + ' 退回 +' + keep);
       sfxEvt('err');
     }
   } else if (a.kind === 'coinify') {
     const t = S.alchTarget;
     const lvl = skillLevel('alchemy'), ml = masteryLevel('alchemy', a.id);
-    const chance = Math.min(0.95, 0.40 + lvl * 0.004 + ml * 0.003);
+    const chance = Math.min(0.95, 0.40 + lvl * 0.004 + ml * 0.003 + (X0 ? X0.alchAdd : 0));
     if (Math.random() < chance) {
-      const g = Math.round(ITEMS[t].price * 1.6);
+      const g = Math.round(ITEMS[t].price * 1.6 * (1 + (X0 ? X0.coinGold : 0)));
       addGold(g);
       pushLog('💰 金币化成功，获得 ' + fmt(g) + ' 金币');
       sfxEvt('coin');
@@ -269,9 +289,9 @@ function completeAction() {
   } else if (a.kind === 'decompose') {
     const t = S.alchTarget;
     const lvl = skillLevel('alchemy'), ml = masteryLevel('alchemy', a.id);
-    const chance = Math.min(0.95, 0.45 + lvl * 0.004 + ml * 0.003);
+    const chance = Math.min(0.95, 0.45 + lvl * 0.004 + ml * 0.003 + (X0 ? X0.alchAdd : 0));
     if (Math.random() < chance) {
-      const n = Math.max(1, Math.round(ITEMS[t].price / 60));
+      const n = Math.max(1, Math.round((ITEMS[t].price / 60) * (1 + (X0 ? X0.decomposeMul : 0))));
       addItem('essence', n);
       pushLog('💎 分解成功，获得 ' + n + ' 星精华');
     } else { pushLog('✖ 分解失败'); }
@@ -280,7 +300,7 @@ function completeAction() {
     const it = ITEMS[t];
     const nxt = nextTierItem(t);
     const lvl = skillLevel('alchemy'), ml = masteryLevel('alchemy', a.id);
-    const chance = Math.min(0.9, 0.35 + lvl * 0.003 + ml * 0.003);
+    const chance = Math.min(0.9, 0.35 + lvl * 0.003 + ml * 0.003 + (X0 ? X0.alchAdd : 0));
     if (nxt && Math.random() < chance) { addItem(nxt, 1); pushLog('♻ 嬗变成功：' + it.name + ' → ' + ITEMS[nxt].name); }
     else { addItem('essence', 1); pushLog('✖ 嬗变失败'); }
   } else {
@@ -289,16 +309,29 @@ function completeAction() {
     let mult = Math.floor(eff);
     if (Math.random() < (eff % 1)) mult += 1;
     mult += 1;
+    /* ---- 天赋：连枷节奏（连续同动作）/ 熟成链（背包留有余粮）/ 双收 ---- */
+    if (X0) {
+      if (X0.streak > 0 && S.talentStreak && S.talentStreak.k === sk + ':' + a.id) {
+        mult *= (1 + Math.min(X0.streak * S.talentStreak.n, 0.20));
+      }
+      if (X0.chain > 0 && a.in) {
+        let chained = false;
+        for (const mk in a.in) { if ((count(mk) || 0) >= 10) { chained = true; break; } }
+        if (chained) mult *= (1 + X0.chain);
+      }
+      if (X0.dbl > 0 && Math.random() < X0.dbl) mult *= 2;
+    }
     if (a.kind === 'cook') {
       const ml = masteryLevel(sk, a.id);
-      const burn = Math.max(0, 0.22 - ml * 0.0022 - skillLevel(sk) * 0.0012 - eff * 0.15);
+      const burnRaw = Math.max(0, 0.22 - ml * 0.0022 - skillLevel(sk) * 0.0012 - eff * 0.15);
+      const burn = burnRaw * (X0 ? X0.burnMul : 1);   /* 天赋「稳火」减半焦糊 */
       if (Math.random() < burn) burned = true;
     }
     if (burned) {
       pushLog('🔥 烹饪失败，' + a.name + ' 烧焦了');
       sfxEvt('err');
     } else {
-      for (const k in a.out) addItem(k, a.out[k] * mult);
+      for (const k in a.out) addItem(k, Math.max(1, Math.round(a.out[k] * mult)));
       if (S.stats) S.stats.crafted++;
       /* 生产音效：按技能给不同质感（Kenney Impact Sounds, CC0） */
       if (sk === 'woodcutting') sfxEvt('wood');
@@ -311,7 +344,13 @@ function completeAction() {
         if (Math.random() < a.rare[k] * (1 + B.rare)) { addItem(k, 1); }
       }
     }
-    onTaskProgress(sk, a, burned ? 0 : mult);
+    onTaskProgress(sk, a, burned ? 0 : Math.round(mult));
+  }
+
+  /* 连击状态：连续同一动作则累加，换动作则重置（供「连枷节奏」「堆垛」使用） */
+  {
+    const key = sk + ':' + act.actId;
+    S.talentStreak = { k: key, n: (S.talentStreak && S.talentStreak.k === key ? S.talentStreak.n + 1 : 1) };
   }
 
   const lvlBefore = skillLevel(sk);
@@ -346,9 +385,14 @@ function tickAction(dt) {
 function taskInterval() {
   let h = 8;
   ['t_cd1', 't_cd2', 't_cd3', 't_cd4'].forEach(function (k) { if (S.shop[k]) h--; });
+  if (window.Talents) h *= window.Talents.extras().taskIntMul;   /* 天赋「消息灵通」 */
   return h * 3600 * 1000;
 }
-function taskSlots() { return 6 + (S.shop['t_slot'] || 0); }
+function taskSlots() {
+  let n = 6 + (S.shop['t_slot'] || 0);
+  if (window.Talents) n += window.Talents.extras().taskSlot;     /* 天赋「多线操盘」 */
+  return n;
+}
 
 function genTask() {
   if (S.tasks.length >= taskSlots()) { S.nextTask = Date.now() + taskInterval(); return; }
@@ -426,6 +470,7 @@ function claimTask(id) {
   if (i < 0) return;
   const t = S.tasks[i];
   if (t.have < t.need) { UI.toast('任务尚未完成'); return; }
+  if (window.Talents) t.gold = Math.round(t.gold * (1 + window.Talents.extras().task));  /* 天赋「人脉」等 */
   addGold(t.gold);
   S.tokens += t.tokens;
   S.taskPoints += t.tokens;
@@ -473,7 +518,7 @@ function sellItem(id, n) {
   n = Math.min(n, count(id));
   if (n <= 0) return;
   takeItems({ [id]: n });
-  const g = Math.round(ITEMS[id].price * 0.5 * n);
+  const g = Math.round(ITEMS[id].price * 0.5 * n * (window.Talents ? (1 + window.Talents.extras().sell) : 1));
   addGold(g);
   sfxEvt('sell');
   S.stats.spent += 0;
@@ -514,7 +559,7 @@ function vendorSell(id, n) {
   n = Math.min(Math.round(n) || 0, count(id));
   if (n <= 0) return 0;
   takeItems({ [id]: n });
-  const g = buyback(id) * n;
+  const g = Math.round(buyback(id) * n * (window.Talents ? (1 + window.Talents.extras().sell) : 1));
   addGold(g);
   pushLog('卖给商人 ' + n + ' × ' + ITEMS[id].name + '，+' + fmt(g) + ' 金币');
   UI.dirty = true;
@@ -635,7 +680,9 @@ function ahDur(id) {
 }
 function ahDeposit(itemId, qty, durMul) {
   const base = (ITEMS[itemId] ? ITEMS[itemId].price : 10) * qty;
-  return Math.max(1, Math.round(base * 0.05 * durMul));
+  let m = 0.05 * durMul;
+  if (window.Talents) m *= (1 + window.Talents.extras().ahFee);   /* 天赋「保证金」 */
+  return Math.max(1, Math.round(base * m));
 }
 function ahMinBid(l) {
   if (!l || l.done) return 0;
@@ -860,8 +907,11 @@ function runOffline(sec) {
   const k0 = (S.stats && S.stats.kills) || 0;
   const d0 = (S.stats && S.stats.deaths) || 0;
 
+  /* 天赋「夜市 / 夜巡」：同样的离线时长，结算出更多的进度 */
+  const om = window.Talents ? (1 + window.Talents.extras().offlineMul) : 1;
+
   let guard = 20000;
-  let left = sec;
+  let left = sec * om;
   /* 技能：解析式快进 */
   while (left > 0 && guard-- > 0) {
     if (!S.action && !tryStart()) break;
@@ -873,7 +923,7 @@ function runOffline(sec) {
   res.gold = S.gold - g0;
   /* 战斗：粗粒度模拟 */
   if (S.combat && S.combat.active) {
-    let csec = Math.min(sec, 4 * 3600);
+    let csec = Math.min(sec * om, 4 * 3600 * om);
     let step = 1.0;
     let g = 0;
     while (csec > 0 && g++ < 20000) {

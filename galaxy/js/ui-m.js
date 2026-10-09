@@ -33,8 +33,8 @@ var MUI = {
     ['skill', '技能', '🧺'], ['queue', '队列', '⏳'], ['combat', '战斗', '⚔️'], ['bag', '背包', '🎒'],
     ['equip', '装备', '🛡️'], ['mastery', '专精', '✦'], ['task', '任务', '📜'],
     ['market', '拍卖', '🏪'], ['vendor', '商人', '💱'], ['house', '牧场', '🏠'],
-    ['social', '社交', '🌐'], ['ach', '成就', '🏆'], ['stats', '统计', '📊'],
-    ['about', '关于', 'ℹ️']
+    ['social', '社交', '🌐'], ['ach', '成就', '🏆'], ['talent', '天赋', '🌳'],
+    ['stats', '统计', '📊'], ['about', '关于', 'ℹ️']
   ],
   /* 成就面板 */
   achCat: 'all',
@@ -349,6 +349,12 @@ var MUI = {
     else if (a === 'tut-skip') { if (window.Tutorial) Tutorial.skipAll(); }
     else if (a === 'tut-restart') { if (window.Tutorial) Tutorial.restart(); }
     else if (a === 'privacy') { MUI.showPrivacy(); }
+    /* ---- 天赋树 ---- */
+    else if (a === 'talent-pick') { if (window.Talents) Talents.pick(x); MUI.dirty = true; }
+    else if (a === 'talent-reset') {
+      if (window.Talents && Talents.reset()) MUI.toast('♻ 已洗点，所有点数返还');
+      MUI.dirty = true;
+    }
     /* ---- 存档备份 ---- */
     else if (a === 'bu-export') {
       if (!window.Backup) return;
@@ -742,6 +748,7 @@ var MUI = {
     if (t === 'ach') return MUI.pAch();
     if (t === 'about') return MUI.pAbout();
     if (t === 'stats') return MUI.pStats();
+    if (t === 'talent') return MUI.pTalent();
     return '';
   },
 
@@ -2130,6 +2137,15 @@ var MUI = {
     arr.push({ name: S.name, lv: me, me: true });
     arr.sort(function (a, b) { return b.lv - a.lv; });
     return arr;
+  },
+
+  /* -------- 天赋树 -------- */
+  pTalent: function () {
+    if (!window.Talents) return '<div class="card dim">天赋模块未加载</div>';
+    var h = '<div class="card"><div class="skhd">' +
+      '<span class="ic">🌳</span><span><div class="nm">星海天赋树</div>' +
+      '<div class="ds">每层三选一，点数有限——你的取舍就是你的流派</div></span></div></div>';
+    return h + Talents.html();
   },
 
   /* -------- 统计 -------- */

@@ -38,7 +38,7 @@ function lvlInfo(xp, table) {
 const S = {
   name: '牧牛人', server: '星海一区', created: Date.now(), savedAt: Date.now(),
   gold: 800, cowbell: 5, tokens: 0, taskPoints: 0,
-  skills: {}, subs: {}, mastery: {}, pool: {},
+  skills: {}, subs: {}, mastery: {}, pool: {}, talents: {}, talentResets: 0, talentStreak: null,
   bank: {}, bag: {}, equip: {}, enhance: {},
   buffs: [], queue: [], action: null,
   houses: {}, shop: {}, bell: {},
@@ -72,6 +72,9 @@ function newGame(name) {
   S.bag = { cupcake: 3 };
   S.tasks = []; S.shop = {}; S.bell = {}; S.buffs = []; S.chat = [];
   S.tut = { step: 0 };   /* 首启引导从头开始 */
+  S.talents = {};        /* 天赋树：{ 节点id: 1 } */
+  S.talentResets = 0;    /* 洗点次数（前 3 次免费） */
+  S.talentStreak = null; /* 连击状态：{ k: '技能:动作', n: 次数 } */
   S.combat = null; S.action = null;
   S.queue = [];
   S.queueSlots = Q_SLOT_DEFAULT;
@@ -260,6 +263,21 @@ function bonuses() {
   HOUSES.forEach(function (h) { hl += (S.houses[h.id] || 0); });
   B.rare += 0.002 * hl;
   B.wisdom += 0.0005 * hl;
+  /* 天赋树：未点亮任何节点时下列各项均为 0，回溯后与旧版行为完全一致 */
+  if (window.Talents) {
+    const T = window.Talents.bonus();
+    if (T.xp) B.xp += T.xp;
+    if (T.mxp) B.mxp += T.mxp;
+    if (T.speed) B.speed += T.speed;
+    if (T.rare) B.rare += T.rare;
+    if (T.wisdom) B.wisdom += T.wisdom;
+    if (T.offline) B.offline += T.offline;
+    if (T.dmg) B.dmg += T.dmg;
+    if (T.acc) B.acc += T.acc;
+    if (T.armor) B.armor += T.armor;
+    if (T.effAll) B.effAll += T.effAll;
+    for (const k in T.eff) B.eff[k] = (B.eff[k] || 0) + T.eff[k];
+  }
   return B;
 }
 
@@ -430,7 +448,9 @@ const Q_SLOT_COST = [
 ];
 
 function queueSlots() {
-  return (typeof S.queueSlots === 'number' && S.queueSlots > 0) ? S.queueSlots : Q_SLOT_DEFAULT;
+  let n = (typeof S.queueSlots === 'number' && S.queueSlots > 0) ? S.queueSlots : Q_SLOT_DEFAULT;
+  if (window.Talents) n += window.Talents.extras().queueSlot;   /* 天赋「流水线」 */
+  return n;
 }
 /* 下一个可解锁的槽位信息（已满则返回 null） */
 function queueNextSlot() {
@@ -464,6 +484,9 @@ function loadGame() {
     if (!S.ach) S.ach = {};          /* 成就：每条链的等级 */
     if (!S.achSt) S.achSt = {};      /* 成就：每物品累计获得数 */
     if (!S.stats) S.stats = { kills: 0, deaths: 0, actions: 0, earned: 0, spent: 0, crafted: 0, offline: 0 };
+    if (!S.talents) S.talents = {};          /* 天赋树：老存档迁移为「未点任何节点」 */
+    if (S.talentResets == null) S.talentResets = 0;
+    if (!S.talentStreak) S.talentStreak = null;
     return true;
   } catch (e) { return false; }
 }
