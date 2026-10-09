@@ -209,6 +209,73 @@ body {
 .chip.lack { border-color: #5a2a30; color: #f0645f; }
 .chip.lack b { color: #f0645f; }
 
+.cred {
+  padding: 6px 0;
+  border-bottom: 1px solid #1a2138;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #b8c2e0;
+}
+.cred:last-of-type { border-bottom: 0; }
+.cred-t { color: #dbe2f5; font-size: 12px; }
+.cred-t em {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 6px;
+  background: #26315c;
+  color: #9fd6ff;
+  font-style: normal;
+  font-size: 9px;
+}
+.cred-u { color: #8892b8; }
+.cred-a { color: #5f6a92; font-size: 10px; word-break: break-all; }
+/* ============================================================
+ *  Kenney CC0 按钮纹理（渐进增强）
+ *  只有内核支持多重背景时才会套用 .multibg 前缀的规则，
+ *  老 WebView 自动回落到原来的纯 CSS 渐变，不会破版。
+ *  素材：Kenney UI Pack (CC0 1.0) — 见关于页署名表
+ * ============================================================ */
+.multibg button.gold,
+.multibg button.wide.gold {
+  background-image:
+    -webkit-linear-gradient(rgba(242, 193, 78, .9), rgba(138, 107, 31, .92)),
+    url(media/ui/btn_rect_depth.png);
+  background-image:
+    linear-gradient(rgba(242, 193, 78, .9), rgba(138, 107, 31, .92)),
+    url(media/ui/btn_rect_depth.png);
+  background-size: 100% 100%;
+}
+.multibg button.gold:active,
+.multibg button.wide.gold:active {
+  background-image:
+    -webkit-linear-gradient(rgba(255, 220, 130, .93), rgba(160, 124, 40, .95)),
+    url(media/ui/btn_rect_depth.png);
+  background-image:
+    linear-gradient(rgba(255, 220, 130, .93), rgba(160, 124, 40, .95)),
+    url(media/ui/btn_rect_depth.png);
+}
+.multibg .qs {
+  background-image: -webkit-linear-gradient(rgba(19, 36, 68, .92), rgba(11, 16, 32, .92)),
+    url(media/ui/btn_round.png);
+  background-image: linear-gradient(rgba(19, 36, 68, .92), rgba(11, 16, 32, .92)),
+    url(media/ui/btn_round.png);
+  background-size: 100% 100%;
+  border-color: #3c4a80;
+}
+.multibg .bar,
+.multibg .mq-bar,
+.multibg .achbar {
+  background-image: -webkit-linear-gradient(rgba(8, 13, 28, .9), rgba(8, 13, 28, .9)),
+    url(media/ui/bar_slot.png);
+  background-image: linear-gradient(rgba(8, 13, 28, .9), rgba(8, 13, 28, .9)),
+    url(media/ui/bar_slot.png);
+  background-size: 100% 100%;
+}
+
+.volsl { display: inline-block; width: 100%; max-width: 150px; vertical-align: middle; }
+.volsl input { display: block; width: 100%; }
+
 /* ---------- 关于 / 致谢 ---------- */
 .abt {
   padding: 6px 0;

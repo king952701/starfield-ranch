@@ -88,6 +88,14 @@ function newGame(name) {
 
 /* ---------- 背包 ---------- */
 function count(id) { return S.bank[id] || 0; }
+/* ============================================================
+ *  音效钩子
+ *  桌面版未加载 audio.js 时静默无效，不影响任何逻辑。
+ * ============================================================ */
+function sfxEvt(n) {
+  try { if (window.SFX) window.SFX.play(n); } catch (e) { }
+}
+
 function addItem(id, n) {
   n = n || 1;
   if (!ITEMS[id]) return 0;

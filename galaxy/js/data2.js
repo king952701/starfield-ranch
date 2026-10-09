@@ -127,5 +127,39 @@ const CHAT_LINES = [
   '强化 +10 成功了！感谢附魔手套'
 ];
 
+/* ============================================================
+ *  第三方素材署名表
+ *  全部来自 Kenney（www.kenney.nl），Creative Commons CC0 1.0。
+ *  CC0 不强制署名，但项目主动列出来源以示尊重。
+ *  若日后加入 CC BY 素材，必须在 author 后注明原名并保留 lic/url。
+ * ============================================================ */
+const CREDITS = [
+  {
+    pkg: 'UI Pack (2.0)', use: '按钮底图、进度条槽、勾选/叉/星标图标',
+    author: 'Kenney Vleugels（Kenney.nl）', lic: 'CC0 1.0',
+    url: 'https://kenney.nl/assets/ui-pack'
+  },
+  {
+    pkg: 'Interface Sounds (1.0)', use: '界面点击、切页、确认、错误提示音',
+    author: 'Kenney（Kenney.nl）', lic: 'CC0 1.0',
+    url: 'https://kenney.nl/assets/interface-sounds'
+  },
+  {
+    pkg: 'Impact Sounds (1.0)', use: '采集、制造、出售、战斗命中、升级铃',
+    author: 'Kenney（Kenney.nl）', lic: 'CC0 1.0',
+    url: 'https://kenney.nl/assets/impact-sounds'
+  },
+  {
+    pkg: 'Sci-Fi Sounds (1.0)', use: '面板开启/关闭、护盾、科幻氛围音',
+    author: 'Kenney（Kenney.nl）', lic: 'CC0 1.0',
+    url: 'https://kenney.nl/assets/sci-fi-sounds'
+  },
+  {
+    pkg: 'Music Jingles', use: '技能升级与成就达成的旋律',
+    author: 'Kenney Vleugels（Kenney.nl）', lic: 'CC0 1.0',
+    url: 'https://kenney.nl/assets/music-jingles'
+  }
+];
+
 /* ---------- 排行榜 NPC ---------- */
 const NPC_NAMES = ['奶牛大魔王', '星尘小笼包', '奶酪游侠', '银河摆渡人', '沐莓奶茶', '奥术老张', '彩虹牛牛', '虚空摸鱼王', '超新星咸鱼', '挤奶工小李', '苔藓史莱姆', '牛铃收藏家', '铁斧阿强', '钓鱼佬老王', '星海第一牧'];

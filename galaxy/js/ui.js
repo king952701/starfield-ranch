@@ -325,7 +325,7 @@ const UI = {
       ['界面', '全部由 CSS 手绘完成（渐变、边框与圆角），未使用任何背景贴图。'],
       ['图标', '全部为 Unicode 表情字符（Emoji），以文字形式排入界面，不含图片文件，由<b>设备系统字体</b>现场渲染；Android 设备上通常来自 <b>Noto Emoji</b> 系列。'],
       ['字体', '使用系统默认字体栈，项目内未打包任何字体文件。'],
-      ['音效 / 音乐', '本作不含任何音频素材，也没有背景音乐。'],
+      ['音乐', '不含持续播放的背景音乐；升级与成就时的短旋律为 CC0 授权的 jingle。'],
       ['Unicode 与 Emoji', '字符编码遵循 Unicode 标准；字形设计与版权归各自的字体项目及 Unicode 联盟所有。'],
       ['Noto Emoji', 'Google 发布，字体部分采用 SIL Open Font License 1.1，图形部分采用 CC BY 4.0 授权。'],
       ['技术栈', 'HTML + CSS + 原生 JavaScript，未接入任何统计、广告或支付 SDK。'],
@@ -339,6 +339,21 @@ const UI = {
     h += '<div style="font-size:12px;line-height:1.9">' + rows.slice(4).map(function (r) {
       return '<div><b style="color:var(--gold)">' + r[0] + '</b>：' + r[1] + '</div>';
     }).join('') + '</div>';
+    if (typeof CREDITS !== 'undefined' && CREDITS.length) {
+      h += '<h3 style="font-size:13px;color:var(--gold);margin:12px 0 6px">📦 第三方素材署名</h3>';
+      h += '<div style="font-size:12px;line-height:1.8">';
+      CREDITS.forEach(function (cd) {
+        h += '<div style="padding:5px 0;border-bottom:1px solid #1a2138">' +
+          '<div><b>' + cd.pkg + '</b> <span style="color:var(--dim)">[' + cd.lic + ']</span></div>' +
+          '<div style="color:var(--dim)">' + cd.use + '</div>' +
+          '<div style="color:var(--dim);font-size:11px">作者：' + cd.author + '　来源：' + cd.url + '</div>' +
+          '</div>';
+      });
+      h += '<div style="color:var(--dim);font-size:11px;margin-top:6px">' +
+        '以上素材均为 Creative Commons CC0 1.0（公有领域奉献），允许个人、教育与商业用途；' +
+        '署名非强制，本项目主动列出以示尊重。完整许可原文见 media/THIRD-PARTY-LICENSES.txt。</div>';
+      h += '</div>';
+    }
     h += '<h3 style="font-size:13px;color:var(--gold);margin:12px 0 6px">⚖️ 原创声明</h3>';
     h += '<p style="font-size:12px;line-height:1.8">' +
       '本作的人物设定、物品名称、技能与战斗数值、任务与世界频道文本均为独立创作。' +

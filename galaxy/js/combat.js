@@ -214,6 +214,7 @@ const Combat = {
     dmg = Combat.mitigate(dmg, Combat.mobDef(m, P.dmgType), P.pen);
     c.mob.hp -= dmg;
     Combat.say((crit ? '💥 暴击 ' : '命中 ') + fmt(dmg), crit ? 'crit' : 'hit');
+    sfxEvt(crit ? 'crit' : 'hit');
     if (c.mob.hp <= 0) Combat.kill();
   },
 
@@ -297,6 +298,7 @@ const Combat = {
 
     onTaskKill(c.zone);
     Combat.say('☠ 击败 ' + m.name + '！+' + fmt(xp) + ' 经验、+' + fmt(gold) + ' 金币' + (loot.length ? '、' + loot.join('、') : ''), 'kill');
+    sfxEvt('crit');
     c.mob = null;
     c.spawnT = 1.2;
     UI.dirty = true;

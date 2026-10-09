@@ -189,7 +189,14 @@
     e.preventDefault();
   });
 
-  /* ---------- 7. UA 探测 ---------- */
+  /* ---------- 8. 特性探测：多背景（用于渐进增强的 Kenney CC0 按钮纹理） ---------- */
+  try {
+    var probe = document.createElement('div').style;
+    probe.backgroundImage = 'url(#), -webkit-linear-gradient(#fff,#000)';
+    if (probe.backgroundImage.indexOf(',') > 0) {
+      document.documentElement.className += ' multibg';
+    }
+  } catch (e8) { }
   var ua = (navigator.userAgent || '').toLowerCase();
   var browser = '系统浏览器';
   if (ua.indexOf('micromessenger') >= 0) browser = '社交应用内置';

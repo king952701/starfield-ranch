@@ -198,8 +198,9 @@ var MUI = {
     if (!ITEMS[id]) return;
     MUI.infoId = id;
     MUI.renderModal();
+    sfxEvt('open');      /* 星舰舱门感（Kenney Sci-Fi Sounds, CC0） */
   },
-  closeModal: function () { MUI.infoId = null; MUI.renderModal(); },
+  closeModal: function () { MUI.infoId = null; MUI.renderModal(); sfxEvt('close'); },
   renderModal: function () {
     var w = document.getElementById('mmodal');
     if (!w) return;
@@ -290,7 +291,7 @@ var MUI = {
     var x = b.getAttribute('data-a');
     var y = b.getAttribute('data-b');
     var z = b.getAttribute('data-c');
-    if (a === 'tab') { MUI.tab = x; MUI.dirty = true; MUI.scrollTop(); }
+    if (a === 'tab') { MUI.tab = x; MUI.dirty = true; MUI.scrollTop(); sfxEvt('tab'); }
     else if (a === 'skill') { MUI.skill = x; MUI.tab = 'skill'; MUI.dirty = true; MUI.scrollTop(); }
     else if (a === 'queue') { queueAction(x, y, z === 'inf' ? -1 : parseInt(z || '1', 10)); }
     else if (a === 'clearq') { clearQueue(); }
@@ -327,6 +328,11 @@ var MUI = {
       MUI.dirty = true;
     }
     else if (a === 'achqclear') { MUI.achQ = ''; MUI.dirty = true; }
+    /* ---- 音效设置 ---- */
+    else if (a === 'sfx-toggle') {
+      if (window.SFX) { window.SFX.setOn(!window.SFX.on); MUI.dirty = true; }
+    }
+    else if (a === 'sfx-test') { if (window.SFX) window.SFX.play(x); }
     else if (a === 'combat-start') { if (!S.combat || !S.combat.active) Combat.start(x); else Combat.stop(); }
     else if (a === 'combat-stop') { Combat.stop(); }
     else if (a === 'heal') { Combat.healFull(); }
@@ -421,6 +427,9 @@ var MUI = {
     else if (s === 'bagq') { MUI.bankQ = parseInt(el.value, 10); if (isNaN(MUI.bankQ)) MUI.bankQ = -1; MUI.dirty = true; }
     else if (s === 'ah-item') { MUI.ahItem = el.value; MUI.dirty = true; }
     else if (s === 'ach-q') { MUI.achQ = el.value || ''; MUI.dirty = true; }
+    else if (s === 'sfx-vol') {
+      if (window.SFX) { window.SFX.setVol(parseInt(el.value, 10) / 100); MUI.dirty = true; }
+    }
     else if (s === 'ah-q') { MUI.ahQ = el.value || ''; MUI.dirty = true; }
     else if (s === 'ah-sort') { MUI.ahSort = el.value; MUI.dirty = true; }
     else if (s === 'ah-qty') {
@@ -793,17 +802,59 @@ var MUI = {
       '<div class="mp-v">《星海牧场》是一款以「养殖 → 加工 → 制造 → 交易」长产业链为核心的放置养成游戏。' +
       '全部代码、数值设计与文本内容均为本项目原创撰写，未使用任何游戏引擎或第三方游戏素材。</div></div>';
 
-    h += '<div class="hd"><h3>🎨 美术资源致谢</h3></div><div class="card">';
-    h += '<div class="abt"><b>界面</b><span>全部由 CSS 手绘完成（渐变、边框与圆角），' +
-      '未使用任何背景贴图。</span></div>';
-    h += '<div class="abt"><b>图标</b><span>全部为 Unicode 表情字符（Emoji），' +
-      '以文字形式排入界面，不含图片文件，由<b>设备系统字体</b>现场渲染。' +
-      'Android 设备上通常来自 <b>Noto Emoji</b> 系列。</span></div>';
-    h += '<div class="abt"><b>字体</b><span>使用系统默认字体栈，项目内未打包任何字体文件。</span></div>';
-    h += '<div class="abt"><b>音效 / 音乐</b><span>本作不含任何音频素材，也没有背景音乐。</span></div>';
+    /* ---- 音效设置 ---- */
+    var hasSFX = !!window.SFX;
+    h += '<div class="hd"><h3>🔊 音效</h3></div><div class="card">';
+    if (!hasSFX) {
+      h += '<div class="dim">当前环境未加载音效模块。</div>';
+    } else {
+      var sOn = window.SFX.on;
+      h += '<div class="abt"><b>总开关</b><span>' +
+        '<button class="mini ' + (sOn ? 'gold' : '') + '" data-act="sfx-toggle">' +
+        (sOn ? '🔊 已开启（点此关闭）' : '🔇 已关闭（点此开启）') + '</button></span></div>';
+      h += '<div class="abt"><b>音量</b><span>' +
+        '<span class="volsl"><input type="range" min="0" max="100" value="' +
+        Math.round(window.SFX.vol * 100) + '" data-sel="sfx-vol"></span>' +
+        '<b>' + Math.round(window.SFX.vol * 100) + '%</b></span></div>';
+      h += '<div class="abt"><b>试听</b><span>' +
+        '<button class="mini" data-act="sfx-test" data-a="click">点击音</button> ' +
+        '<button class="mini" data-act="sfx-test" data-a="gather">采集</button> ' +
+        '<button class="mini" data-act="sfx-test" data-a="levelup">升级铃</button> ' +
+        '<button class="mini" data-act="sfx-test" data-a="up">旋律</button></span></div>';
+      h += '<div class="dim" style="margin-top:4px">音效会在你第一次触摸屏幕后自动解锁（移动端浏览器的限制），' +
+        '并随进度自动记忆。</div>';
+    }
     h += '</div>';
 
-    h += '<div class="hd"><h3>📜 第三方许可与声明</h3></div><div class="card">';
+    h += '<div class="hd"><h3>🎨 美术资源致谢</h3></div><div class="card">';
+    h += '<div class="abt"><b>界面</b><span>由 CSS 绘制为主（渐变、边框与圆角），' +
+      '并叠加少量 CC0 按钮底图与图标。</span></div>';
+    h += '<div class="abt"><b>图标</b><span>主体为 Unicode 表情字符（Emoji），' +
+      '以文字形式排入界面，由<b>设备系统字体</b>现场渲染。' +
+      'Android 设备上通常来自 <b>Noto Emoji</b> 系列。</span></div>';
+    h += '<div class="abt"><b>字体</b><span>使用系统默认字体栈，项目内未打包任何字体文件。</span></div>';
+    h += '<div class="abt"><b>音乐</b><span>不含持续播放的背景音乐；' +
+      '升级与成就时的短旋律为 CC0 授权的 jingle。</span></div>';
+    h += '</div>';
+
+    /* ---- CC0 署名表 ---- */
+    h += '<div class="hd"><h3>📦 第三方素材署名</h3></div><div class="card">';
+    if (typeof CREDITS === 'undefined' || !CREDITS.length) {
+      h += '<div class="dim">暂无第三方素材。</div>';
+    } else {
+      for (var ci = 0; ci < CREDITS.length; ci++) {
+        var cd = CREDITS[ci];
+        h += '<div class="cred"><div class="cred-t">' + cd.pkg + '<em>' + cd.lic + '</em></div>' +
+          '<div class="cred-u">' + cd.use + '</div>' +
+          '<div class="cred-a">作者：' + cd.author + '　来源：' + cd.url + '</div></div>';
+      }
+      h += '<div class="dim" style="margin-top:6px">' +
+        '以上素材均为 Creative Commons CC0 1.0（公有领域奉献），允许个人、教育与商业用途；' +
+        '署名非强制，本项目主动列出以示尊重。完整许可原文见 media/THIRD-PARTY-LICENSES.txt。</div>';
+    }
+    h += '</div>';
+
+    h += '<div class="hd"><h3>📜 技术与许可声明</h3></div><div class="card">';
     h += '<div class="abt"><b>Unicode 与 Emoji</b><span>字符编码遵循 Unicode 标准；' +
       '字形设计与版权归各自的字体项目及 Unicode 联盟所有。</span></div>';
     h += '<div class="abt"><b>Noto Emoji</b><span>Google 发布，' +

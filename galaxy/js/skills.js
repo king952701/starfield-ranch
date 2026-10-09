@@ -96,6 +96,7 @@ function claimAch(id) {
   pushLog('🏆 成就 ' + ITEMS[id].name + ' 第 ' + (lv + 1) + ' 档达成：' + achRewardText(r));
   UI.dirty = true;
   UI.toast('🏆 ' + ITEMS[id].name + ' ' + achRewardText(r));
+  sfxEvt('levelup'); sfxEvt('up');   /* 成就旋律（Kenney Music Jingles, CC0） */
   return true;
 }
 function claimAllAch() {
@@ -194,6 +195,7 @@ function queueUnlock() {
   takeItems(c.items);
   S.queueSlots = nx.slot;
   pushLog('⚙ 工作队列扩充到第 ' + nx.slot + ' 格');
+  sfxEvt('up');
   UI.dirty = true;
   UI.toast('队列已扩充到 ' + nx.slot + ' 格！');
   return true;
@@ -244,9 +246,11 @@ function completeAction() {
     if (Math.random() < chance) {
       S.enhance[sl] = cur + 1;
       pushLog('✔ 强化成功！' + ITEMS[S.equip[sl]].name + ' → +' + S.enhance[sl]);
+      sfxEvt('equip'); sfxEvt('shield');
     } else {
       S.enhance[sl] = 0;
       pushLog('✖ 强化失败，' + ITEMS[S.equip[sl]].name + ' 退回 +0');
+      sfxEvt('err');
     }
   } else if (a.kind === 'coinify') {
     const t = S.alchTarget;
@@ -256,9 +260,11 @@ function completeAction() {
       const g = Math.round(ITEMS[t].price * 1.6);
       addGold(g);
       pushLog('💰 金币化成功，获得 ' + fmt(g) + ' 金币');
+      sfxEvt('coin');
     } else {
       addItem('essence', 1);
       pushLog('✖ 金币化失败，物品消失（返还 1 星精华）');
+      sfxEvt('err');
     }
   } else if (a.kind === 'decompose') {
     const t = S.alchTarget;
@@ -290,9 +296,15 @@ function completeAction() {
     }
     if (burned) {
       pushLog('🔥 烹饪失败，' + a.name + ' 烧焦了');
+      sfxEvt('err');
     } else {
       for (const k in a.out) addItem(k, a.out[k] * mult);
       if (S.stats) S.stats.crafted++;
+      /* 生产音效：按技能给不同质感（Kenney Impact Sounds, CC0） */
+      if (sk === 'woodcutting') sfxEvt('wood');
+      else if (sk === 'cheesesmithing' || sk === 'tailoring' || sk === 'crafting') sfxEvt('craft');
+      else if (sk === 'cooking' || sk === 'brewing') sfxEvt('soft');
+      else sfxEvt('gather');
     }
     if (a.rare) {
       for (const k in a.rare) {
@@ -302,9 +314,12 @@ function completeAction() {
     onTaskProgress(sk, a, burned ? 0 : mult);
   }
 
+  const lvlBefore = skillLevel(sk);
   addXp(sk, a.xp * (burned ? 0.4 : 1));
   addMastery(sk, a.id, masteryGain(sk, a));
   S.stats.actions++;
+  /* 升级：铃声提示（Kenney impactBell, CC0） */
+  if (skillLevel(sk) > lvlBefore) sfxEvt('levelup');
   S.action = null;
   tryStart();
   UI.dirty = true;
@@ -460,6 +475,7 @@ function sellItem(id, n) {
   takeItems({ [id]: n });
   const g = Math.round(ITEMS[id].price * 0.5 * n);
   addGold(g);
+  sfxEvt('sell');
   S.stats.spent += 0;
   pushLog('售出 ' + n + ' × ' + ITEMS[id].name + '，获得 ' + fmt(g) + ' 金币');
 }
