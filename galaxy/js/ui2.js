@@ -424,6 +424,26 @@ Object.assign(UI, {
       }).join('') + '</div>';
     return h;
   },
+  /* ---------- 隐私政策全文 ---------- */
+  showPrivacy: function () {
+    if (typeof PRIVACY === 'undefined') return;
+    const w = document.getElementById('modalwrap');
+    if (!w) return;
+    let h = '<div class="modal"><h2>🔒 隐私政策</h2>' +
+      '<p class="sub">版本 v' + PRIVACY.ver + ' ｜ 更新于 ' + PRIVACY.updated + '</p>';
+    PRIVACY.secs.forEach(function (s) {
+      h += '<h3 style="font-size:13px;color:var(--gold);margin:12px 0 4px">' + s.h + '</h3>';
+      s.p.forEach(function (t) {
+        h += '<p style="font-size:12px;line-height:1.8;margin:3px 0">' + t + '</p>';
+      });
+    });
+    h += '<button class="big" id="btnpol">我已阅读</button></div>';
+    w.innerHTML = h;
+    w.style.display = 'flex';
+    const b = document.getElementById('btnpol');
+    if (b) b.onclick = function () { w.style.display = 'none'; };
+  },
+
   /* ---------- 玩家档案（内联展开） ---------- */
   heroBlock: function (id) {
     const d = heroOf(id);

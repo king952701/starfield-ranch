@@ -341,6 +341,7 @@ var MUI = {
     else if (a === 'tut-goto') { MUI.tab = x; MUI.dirty = true; }
     else if (a === 'tut-skip') { if (window.Tutorial) Tutorial.skipAll(); }
     else if (a === 'tut-restart') { if (window.Tutorial) Tutorial.restart(); }
+    else if (a === 'privacy') { MUI.showPrivacy(); }
     else if (a === 'lbcat') { MUI.lbCat = x; MUI.dirty = true; }
     else if (a === 'hero') { if (x && heroOf(x)) { MUI.heroId = x; sfxEvt('open'); MUI.renderHero(); } }
     else if (a === 'heroclose') { MUI.heroId = null; sfxEvt('close'); MUI.renderHero(); }
@@ -597,6 +598,26 @@ var MUI = {
     return '';
   },
 
+  /* 隐私政策全文弹层 */
+  showPrivacy: function () {
+    if (typeof PRIVACY === 'undefined') return;
+    var w = document.getElementById('mmodal');
+    if (!w) return;
+    var h = '<div class="mbox"><h2>🔒 隐私政策</h2>' +
+      '<div class="sub">版本 v' + PRIVACY.ver + ' ｜ 更新于 ' + PRIVACY.updated + '</div><div class="pol">';
+    for (var i = 0; i < PRIVACY.secs.length; i++) {
+      var s = PRIVACY.secs[i];
+      h += '<div class="pol-h">' + s.h + '</div>';
+      for (var j = 0; j < s.p.length; j++) h += '<p>' + s.p[j] + '</p>';
+    }
+    h += '</div><button class="big" id="btnpol">我已阅读</button></div>';
+    w.innerHTML = h;
+    w.style.display = '-webkit-box';
+    w.style.display = 'flex';
+    var b = document.getElementById('btnpol');
+    if (b) b.onclick = function () { w.style.display = 'none'; };
+  },
+
   renderRes: function () {
     var h = '<span class="mres-logo">🐄</span>';
     h += '<span class="mres-i">💰<b>' + fmt(S.gold) + '</b></span>';
@@ -821,6 +842,15 @@ var MUI = {
       '<div class="ds">🐄 银河牧场放置养成 · 单机离线可玩</div></span></div>' +
       '<div class="mp-v">《星海牧场》是一款以「养殖 → 加工 → 制造 → 交易」长产业链为核心的放置养成游戏。' +
       '全部代码、数值设计与文本内容均为本项目原创撰写，未使用任何游戏引擎或第三方游戏素材。</div></div>';
+
+    /* ---- 隐私政策 ---- */
+    if (typeof PRIVACY !== 'undefined') {
+      h += '<div class="hd"><h3>🔒 隐私政策</h3></div><div class="card">' +
+        '<div class="abt"><b>版本</b><span>v' + PRIVACY.ver + '（更新于 ' + PRIVACY.updated + '）</span></div>' +
+        '<div class="abt"><b>要点</b><span>纯离线单机，不联网、不收集、不上传个人信息</span></div>' +
+        '<div style="margin-top:6px"><button class="mini gold" data-act="privacy">阅读完整政策</button></div>' +
+        '</div>';
+    }
 
     /* ---- 新人引导 ---- */
     if (window.Tutorial) {

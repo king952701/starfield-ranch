@@ -69,7 +69,9 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);              // localStorage —— 存档核心
         s.setDatabaseEnabled(true);
         s.setJavaScriptCanOpenWindowsAutomatically(false);
-        s.setAllowFileAccess(true);
+        // 所有资源都经 https://appassets 的 WebViewAssetLoader 提供，不需要 file:// 能力。
+        // 收紧后不影响资源加载，同时消除页面读取本地文件的可能（该设置自 API 30 起已废弃）。
+        s.setAllowFileAccess(false);
         s.setAllowContentAccess(false);
         s.setLoadWithOverviewMode(false);
         s.setUseWideViewPort(true);                // 支持 viewport meta

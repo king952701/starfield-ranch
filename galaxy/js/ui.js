@@ -55,6 +55,7 @@ const UI = {
       case 'guild-join': UI.joinGuild(x); break;
       case 'guild-leave': S.guild = null; UI.dirty = true; break;
       case 'lbcat': UI.lbCat = x; UI.dirty = true; break;
+    case 'privacy': UI.showPrivacy(); break;
       case 'hero': if (x && heroOf(x)) { UI.heroId = x; UI.scrollTop && UI.scrollTop(); UI.dirty = true; } break;
       case 'heroclose': UI.heroId = null; UI.dirty = true; break;
       case 'wipe': if (confirm('确定清空存档并重新开始？')) { wipeSave(); location.reload(); } break;
@@ -356,6 +357,12 @@ const UI = {
         '以上素材均为 Creative Commons CC0 1.0（公有领域奉献），允许个人、教育与商业用途；' +
         '署名非强制，本项目主动列出以示尊重。完整许可原文见 media/THIRD-PARTY-LICENSES.txt。</div>';
       h += '</div>';
+    }
+    if (typeof PRIVACY !== 'undefined') {
+      h += '<h3 style="font-size:13px;color:var(--gold);margin:12px 0 6px">🔒 隐私政策</h3>';
+      h += '<p style="font-size:12px;line-height:1.8">v' + PRIVACY.ver + '（更新于 ' + PRIVACY.updated + '）　' +
+        '<span data-act="privacy" style="cursor:pointer;color:var(--gold);text-decoration:underline">阅读完整政策</span>' +
+        '<br>纯离线单机：不联网、不收集、不上传个人信息。</p>';
     }
     h += '<h3 style="font-size:13px;color:var(--gold);margin:12px 0 6px">⚖️ 原创声明</h3>';
     h += '<p style="font-size:12px;line-height:1.8">' +
