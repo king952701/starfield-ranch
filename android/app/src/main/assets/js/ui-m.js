@@ -1257,10 +1257,10 @@ var MUI = {
       return '成功 ' + (c2 * 100).toFixed(0) + '%';
     }
     if (a.kind === 'cook') {
-      var burn = Math.max(0, 0.22 - masteryLevel(sk, a.id) * 0.0022 - skillLevel(sk) * 0.0012 - efficiency(sk) * 0.15);
+      var burn = Math.max(0, 0.22 - masteryLevel(sk, a.id) * 0.0022 - skillLevel(sk) * 0.0012 - efficiency(sk, a.id) * 0.15);
       return '失败 ' + (burn * 100).toFixed(1) + '%';
     }
-    return '额外 +' + (efficiency(sk) * 100).toFixed(0) + '%';
+    return '额外 +' + (efficiency(sk, a.id) * 100).toFixed(0) + '%';
   },
 
   /* -------- 战斗 -------- */

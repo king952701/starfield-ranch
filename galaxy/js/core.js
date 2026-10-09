@@ -5,6 +5,7 @@
  * ============================================================ */
 
 const SAVE_KEY = 'starfield_ranch_v1';
+const SAVE_VERSION = 2;   /* 存档结构版本：新增字段时 +1，loadGame 按版本补齐 */
 
 /* ---------- 经验表 ---------- */
 function xpDiff(L) { return Math.floor((L - 1 + 300 * Math.pow(2, (L - 1) / 7)) / 4); }
@@ -55,6 +56,7 @@ const S = {
 
 function newGame(name) {
   S.name = name || '牧牛人';
+  S.version = SAVE_VERSION;
   S.created = Date.now();
   S.savedAt = Date.now();
   SKILLS.forEach(function (s) {
@@ -281,19 +283,23 @@ function bonuses() {
   return B;
 }
 
-function efficiency(skill) {
+function efficiency(skill, actId) {
   const B = bonuses();
   let e = (B.eff[skill] || 0);
-  // 专精：每级 +0.4%（采集/加工/烹饪）
-  const mt = masteryTotal(skill);
-  e += mt * 0.0004;
+  /* 专精：当前动作主导 + 该技能总和的小额加成。
+     原实现只按「该技能全部动作的专精总和 ×0.0004」计算，练满一个动作会给同技能所有动作加效率，
+     手工艺（约 118 个动作）可达 +467%；现改为两级系数并加总上限。 */
+  const aid = (actId != null) ? actId : (S.action && S.action.skill === skill ? S.action.actId : null);
+  if (aid != null && S.mastery[skill] && S.mastery[skill][aid] != null) {
+    e += levelOf(S.mastery[skill][aid], MST_XP) * NUM.EFF_MASTERY_MAIN;
+  }
+  e += masteryTotal(skill) * NUM.EFF_MASTERY_SUM;
   if (SKILL_MAP[skill] && (SKILL_MAP[skill].cat === 'gather' || SKILL_MAP[skill].cat === 'artisan' || SKILL_MAP[skill].cat === 'culinary')) {
     e += B.effAll || 0;
   }
-  // 工具
-  const toolId = S.equip.tool;
-  if (toolId && ITEMS[toolId] && ITEMS[toolId].toolSkill === skill) e += (ITEMS[toolId].eff[skill] || 0) / 100;
-  return e;
+  /* 工具效率已在 bonuses() 中经 equipAgg() 计入 B.eff（SLOTS 含 tool 槽），
+     此处若再累加一次会造成 +45% 实际生效 +90% 的重复计算。 */
+  return Math.min(e, NUM.EFF_CAP);
 }
 function actionSpeedMul() {
   const B = bonuses();
@@ -464,7 +470,14 @@ function queueNextSlot() {
 
 function saveGame() {
   S.savedAt = Date.now();
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { }
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }
+  catch (e) {
+    /* 配额已满或隐私模式：原先静默吞掉，玩家会以为已经存上了 */
+    const msg = '存档写入失败（存储不可用或已满），请先导出备份';
+    if (window.UI && typeof window.UI.toast === 'function') window.UI.toast(msg);
+    else if (window.MUI && typeof window.MUI.toast === 'function') window.MUI.toast(msg);
+    if (window.console) console.warn(msg, e);
+  }
 }
 function loadGame() {
   try {
@@ -487,6 +500,17 @@ function loadGame() {
     if (!S.talents) S.talents = {};          /* 天赋树：老存档迁移为「未点任何节点」 */
     if (S.talentResets == null) S.talentResets = 0;
     if (!S.talentStreak) S.talentStreak = null;
+    /* 存档版本号：老档缺失时按 v1 补齐，之后按版本逐步迁移 */
+    if (typeof S.version !== 'number') S.version = 1;
+    if (S.version < 2) {
+      if (!S.lock) S.lock = {};          /* 物品锁定：原本由 iteminfo.js 惰性创建 */
+      if (!S.ah) S.ah = { listings: [], seq: 1, refresh: 0 };
+      SKILLS.forEach(function (s) {
+        if (s.id === 'combat') return;
+        if (S.pool[s.id] == null) S.pool[s.id] = 0;
+      });
+      S.version = 2;
+    }
     return true;
   } catch (e) { return false; }
 }

@@ -127,6 +127,7 @@ const Game = {
     if (Game.slowT >= 1) {
       Game.slowT = 0;
       tickTasks();
+      if (window.ahTick) ahTick();               /* 拍卖行：竞价与到期结算（与手机端保持一致） */
       if (window.Tutorial) Tutorial.check();   /* 首启引导：每秒检查目标是否达成 */
       refreshMarket(false);
       Game.chatT++;

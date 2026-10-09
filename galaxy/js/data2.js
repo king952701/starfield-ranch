@@ -67,7 +67,13 @@ const HOUSES = [
   { id: 'mystic', name: '秘法书房', icon: '🔮', sub: 'magic', desc: '每级：魔法 +1、智慧 +0.05%、稀有发现 +0.2%', max: 8 }
 ];
 function houseCost(lv) { // lv: 当前等级(0-7)，返回升到 lv+1 的花费
-  return { gold: Math.round(50000 * Math.pow(3.2, lv)), wood: 10 * Math.pow(2, lv), woodTier: lv, food: 5 * Math.pow(2, lv), foodTier: lv };
+  /* 金币增长原为 3.2^lv：7 间全满需 1.75e9，与后期产出严重脱节（最后 2~3 级是死墙）。
+     改用 2.4^lv 后全满约 2.75e8，落在「后期稳定产出 × 数十小时」的可达区间。 */
+  return {
+    gold: Math.round(NUM.RANCH_GOLD_BASE * Math.pow(NUM.RANCH_GOLD_GROWTH, lv)),
+    wood: NUM.RANCH_WOOD_BASE * Math.pow(NUM.RANCH_MAT_GROWTH, lv), woodTier: lv,
+    food: NUM.RANCH_FOOD_BASE * Math.pow(NUM.RANCH_MAT_GROWTH, lv), foodTier: lv
+  };
 }
 
 /* ---------- 任务板 ---------- */

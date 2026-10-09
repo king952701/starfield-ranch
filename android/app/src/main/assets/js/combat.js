@@ -53,7 +53,8 @@ const Combat = {
     return a / (a + e);
   },
   mitigate: function (dmg, def, pen) {
-    const d = def - pen;
+    /* 穿甲超过防御时原公式会反向放大伤害且没有上限，这里把差值钳到 -100（最多 2 倍） */
+    const d = Math.max(NUM.MITIGATION_MIN_D, def - pen);
     return d >= 0 ? dmg * 100 / (100 + d) : dmg * (100 - d) / 100;
   },
 
@@ -208,7 +209,9 @@ const Combat = {
     const hit = Combat.hitChance(P.accuracy * (1 + (c.buffs['precision'] ? 0.35 : 0)), m.eva);
     if (Math.random() > hit) { Combat.say('攻击被 ' + m.name + ' 闪避', 'miss'); return; }
     let crit = false, dmg = P.maxHit * rnd(0.6, 1);
-    const critChance = Math.min(0.9, P.crit + (P.style === 'ranged' ? hit * 0.3 : 0));
+    /* 原为 min(0.9, …)：装备暴击词缀远超上限，后期恒等于 90%，词缀完全失效。
+       现改为「裸装基础 + 软上限」，满配约 38%，0 暴击装备与满暴击装备差距 ≥30 个百分点。 */
+    const critChance = critChanceOf(P.crit, (P.style === 'ranged' ? hit * 0.3 : 0));
     if (Math.random() < critChance) { crit = true; dmg = P.maxHit; }
     dmg *= (1 + (c.buffs['berserk'] ? 0.3 : 0));
     dmg = Combat.mitigate(dmg, Combat.mobDef(m, P.dmgType), P.pen);
@@ -281,15 +284,16 @@ const Combat = {
     /* 掉落 */
     const B = bonuses();
     const loot = [];
-    if (Math.random() < 0.35 + B.rare) {
+    /* 掉落概率统一钳到上限：满配稀有加成下原本可以超过 100% */
+    if (Math.random() < clampChance(0.35 + B.rare, NUM.RARE_CAP)) {
       const it = pick(z.loot);
       const n = Math.round(rnd(1, 3)) * (m.boss ? 3 : 1);
       addItem(it, n); loot.push(ITEMS[it].name + ' ×' + n);
     }
-    if (Math.random() < 0.18 + B.rare) { addItem('essence', m.boss ? 4 : 1); loot.push('星精华'); }
-    if (Math.random() < 0.06 + B.rare * 0.5) { addItem('gem', 1); loot.push('星辉宝石'); }
+    if (Math.random() < clampChance(0.18 + B.rare, NUM.RARE_CAP)) { addItem('essence', m.boss ? 4 : 1); loot.push('星精华'); }
+    if (Math.random() < clampChance(0.06 + B.rare * 0.5, NUM.RARE_CAP)) { addItem('gem', 1); loot.push('星辉宝石'); }
     if (Math.random() < 0.05) { addItem('tea_leaf', Math.round(rnd(1, 4))); loot.push('茶叶'); }
-    if (Math.random() < 0.04 + B.rare * 0.3) {
+    if (Math.random() < clampChance(0.04 + B.rare * 0.3, NUM.RARE_CAP)) {
       const t = Math.min(6, Math.floor(z.lvl / 15));
       const pool = ITEM_LIST.filter(function (i) { return i.cat === 'equip' && i.line && i.line.indexOf('plate') === 0 && i.tier === t; });
       if (pool.length) { const e = pick(pool); addItem(e.id, 1); loot.push(e.name + '（装备）'); }

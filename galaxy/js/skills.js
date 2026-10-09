@@ -305,7 +305,7 @@ function completeAction() {
     else { addItem('essence', 1); pushLog('✖ 嬗变失败'); }
   } else {
     /* 采集 / 加工 / 烹饪 / 酿造 */
-    const eff = efficiency(sk);
+    const eff = efficiency(sk, a.id);
     let mult = Math.floor(eff);
     if (Math.random() < (eff % 1)) mult += 1;
     mult += 1;
@@ -341,7 +341,7 @@ function completeAction() {
     }
     if (a.rare) {
       for (const k in a.rare) {
-        if (Math.random() < a.rare[k] * (1 + B.rare)) { addItem(k, 1); }
+        if (Math.random() < clampChance(a.rare[k] * (1 + B.rare), NUM.RARE_CAP)) { addItem(k, 1); }
       }
     }
     onTaskProgress(sk, a, burned ? 0 : Math.round(mult));
@@ -515,13 +515,13 @@ function refreshMarket(force) {
   UI.dirty = true;
 }
 function sellItem(id, n) {
+  if (!ITEMS[id]) return;            /* 脏存档里的未知 id：直接忽略，不抛错 */
   n = Math.min(n, count(id));
   if (n <= 0) return;
   takeItems({ [id]: n });
-  const g = Math.round(ITEMS[id].price * 0.5 * n * (window.Talents ? (1 + window.Talents.extras().sell) : 1));
+  const g = Math.round(ITEMS[id].price * NUM.SELL_RATIO * n * (window.Talents ? (1 + window.Talents.extras().sell) : 1));
   addGold(g);
   sfxEvt('sell');
-  S.stats.spent += 0;
   pushLog('售出 ' + n + ' × ' + ITEMS[id].name + '，获得 ' + fmt(g) + ' 金币');
 }
 function fillOrder(oid) {
@@ -582,20 +582,39 @@ function vendorSellQuality(q) {
   UI.dirty = true;
   return { kinds: kinds, qty: qty, gold: gold };
 }
-function vendorSellAll() {
-  let kinds = 0, qty = 0, gold = 0;
+function vendorSellAll(skipConfirm) {
+  /* 回购价按品质固定，与市价无关：高价物品的回购价可能只有市价的 1%~12%，
+     原先「回购全部」一键执行且无提示，玩家一次点击就可能亏掉大半资产。
+     现按「回购价 / 直接出售价」拆分：明显亏的物品需二次确认。 */
+  const cheap = [], risky = [];
+  let gold = 0, qty = 0, kinds = 0;
   for (const k in S.bank) {
     if (!ITEMS[k] || S.bank[k] <= 0) continue;
-    kinds++; qty += S.bank[k];
-    gold += buyback(k) * S.bank[k];
-    delete S.bank[k];
+    const per = buyback(k);
+    const mv = (ITEMS[k].price || 0) * NUM.SELL_RATIO;   /* 参照价：直接出售能拿到的金币 */
+    const n = S.bank[k];
+    const row = { id: k, n: n, gold: per * n, market: mv * n };
+    (mv > 0 && per / mv >= NUM.VENDOR_AUTO_RATIO ? cheap : risky).push(row);
   }
+  let list = cheap.slice();
+  if (risky.length) {
+    let loss = 0;
+    risky.forEach(function (r) { loss += Math.max(0, r.market - r.gold); });
+    const msg = '另有 ' + risky.length + ' 种物资的回购价低于直接出售价，'
+      + '一并回购会少获得约 ' + fmt(loss) + ' 金币。\n仍要全部回购吗？';
+    if (skipConfirm || window.confirm(msg)) list = cheap.concat(risky);
+  }
+  list.forEach(function (r) {
+    if (!S.bank[r.id]) return;
+    delete S.bank[r.id];
+    gold += r.gold; qty += r.n; kinds++;
+  });
   if (qty > 0) {
     addGold(gold);
     pushLog('商人回购全部物资 ' + kinds + ' 种 / ' + fmt(qty) + ' 件，+' + fmt(gold) + ' 金币');
   }
   UI.dirty = true;
-  return { kinds: kinds, qty: qty, gold: gold };
+  return { kinds: kinds, qty: qty, gold: gold, skipped: risky.length && list.length === cheap.length ? risky.length : 0 };
 }
 /* 银行各品质统计 */
 function bankQualityStats() {
@@ -886,6 +905,21 @@ function buyBell(id) {
 }
 
 /* ---------- 离线进度结算 ---------- */
+/* 离线快进超出时间预算时，把「已结算部分」按剩余次数比例放大补齐：
+   收益不丢，也不必真的跑完几十万次结算。专精与稀有掉落按已结算部分计入（略保守）。 */
+function extrapolateOffline(scale, b0, xp0, g0) {
+  for (const k in S.bank) {
+    const d = (S.bank[k] || 0) - (b0[k] || 0);
+    if (d > 0) S.bank[k] = (S.bank[k] || 0) + Math.round(d * scale);
+  }
+  const dg = S.gold - g0;
+  if (dg > 0) S.gold += Math.round(dg * scale);
+  SKILLS.forEach(function (s) {
+    if (s.id === 'combat') return;
+    const d = (S.skills[s.id] || 0) - (xp0[s.id] || 0);
+    if (d > 0) S.skills[s.id] = (S.skills[s.id] || 0) + Math.round(d * scale);
+  });
+}
 function offlineCapSec() {
   const B = bonuses();
   return B.offline * 3600;
@@ -910,16 +944,33 @@ function runOffline(sec) {
   /* 天赋「夜市 / 夜巡」：同样的离线时长，结算出更多的进度 */
   const om = window.Talents ? (1 + window.Talents.extras().offlineMul) : 1;
 
-  let guard = 20000;
+  /* 技能：按「时间预算」快进。
+     原实现用「最多完成 20000 次动作」截断：24h 离线 + 动作 0.3s 时只能结算约 7%，
+     玩家越快反而拿得越少。现改为次数上限仅防死循环，超出时间预算时按已结算部分的平均值外推。 */
+  const nowMs = function () { return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now(); };
+  const ffStart = nowMs();
+  let guard = NUM.OFFLINE_MAX_ACTS;
   let left = sec * om;
-  /* 技能：解析式快进 */
+  let truncated = false;
+  let durSum = 0;
   while (left > 0 && guard-- > 0) {
     if (!S.action && !tryStart()) break;
     if (!S.action) break;
     const need = S.action.dur - S.action.t;
-    if (need <= left) { left -= need; completeAction(); res.acts++; }
+    if (need <= left) { left -= need; durSum += S.action.dur; completeAction(); res.acts++; }
     else { S.action.t += left; left = 0; }
+    if ((res.acts & 1023) === 0 && nowMs() - ffStart > NUM.OFFLINE_BUDGET_MS) { truncated = true; break; }
   }
+  if (truncated && res.acts > 0 && durSum > 0) {
+    const avgDur = durSum / res.acts;
+    const more = Math.min(Math.floor(left / avgDur), NUM.OFFLINE_MAX_ACTS - res.acts);
+    if (more > 0) {
+      extrapolateOffline(more / res.acts, b0, xp0, g0);
+      res.acts += more;
+      res.extrapolated = true;
+    }
+  }
+  res.truncated = truncated;
   res.gold = S.gold - g0;
   /* 战斗：粗粒度模拟 */
   if (S.combat && S.combat.active) {

@@ -169,7 +169,7 @@ const ARMOR_LINES = {
   ranged: {
     nm: ['粗制', '爬虫', '哥布', '野兽', '幽影', '星辉', '虚空'], mat: 'cloth', skill: 'tailoring',
     slots: { head: ['兜帽', '🪶', 2], body: ['皮衣', '🧥', 3], legs: ['皮裤', '👖', 2], feet: ['软靴', '🥿', 1], hands: ['护腕', '🧤', 1] },
-    stats: function (s) { return { armor: 1.2 * s, eva: 3 * s, rangedDmg: 1.1 * s, crit: 0.004 * s, hp: 3 * s }; }
+    stats: function (s) { return { armor: 1.2 * s, eva: 3 * s, rangedDmg: 1.1 * s, crit: NUM.CRIT_PER_SCALE * 0.5 * s, hp: 3 * s }; }
   },
   magic: {
     nm: ['棉', '亚麻', '竹', '丝', '辉光', '星辉', '虚空'], mat: 'cloth', skill: 'tailoring',
@@ -183,8 +183,8 @@ const WEAPON_LINES = [
   { k: 'spear', nm: ['奶酪矛', '翠绿矛', '蔚蓝矛', '泡泡矛', '绯红矛', '彩虹矛', '圣辉矛'], ic: '🔱', style: 'stab', dmgType: 'physical', spd: 2.8, dmg: 1.9, acc: 3.0, mat: 'bar', qty: 3 },
   { k: 'mace', nm: ['奶酪锤', '翠绿锤', '蔚蓝锤', '泡泡锤', '绯红锤', '彩虹锤', '圣辉锤'], ic: '🔨', style: 'smash', dmgType: 'physical', spd: 3.4, dmg: 3.0, acc: 0.9, mat: 'bar', qty: 3 },
   { k: 'bulwark', nm: ['奶酪壁垒', '翠绿壁垒', '蔚蓝壁垒', '泡泡壁垒', '绯红壁垒', '彩虹壁垒', '圣辉壁垒'], ic: '🛡️', style: 'smash', dmgType: 'physical', spd: 3.6, dmg: 1.0, acc: 0.5, mat: 'bar', qty: 3, extra: function (s) { return { armor: 6 * s, hp: 9 * s, defensive: 1 }; } },
-  { k: 'bow', nm: ['木弓', '桦木弓', '雪松弓', '紫心弓', '银杏弓', '红木弓', '奥术弓'], ic: '🏹', style: 'ranged', dmgType: 'physical', spd: 2.2, dmg: 2.0, acc: 2.4, mat: 'wood', qty: 3, crit: 0.012 },
-  { k: 'crossbow', nm: ['木弩', '桦木弩', '雪松弩', '紫心弩', '银杏弩', '红木弩', '奥术弩'], ic: '🎯', style: 'ranged', dmgType: 'physical', spd: 3.0, dmg: 2.8, acc: 1.4, mat: 'wood', qty: 3, crit: 0.008 },
+  { k: 'bow', nm: ['木弓', '桦木弓', '雪松弓', '紫心弓', '银杏弓', '红木弓', '奥术弓'], ic: '🏹', style: 'ranged', dmgType: 'physical', spd: 2.2, dmg: 2.0, acc: 2.4, mat: 'wood', qty: 3, crit: NUM.CRIT_PER_SCALE },
+  { k: 'crossbow', nm: ['木弩', '桦木弩', '雪松弩', '紫心弩', '银杏弩', '红木弩', '奥术弩'], ic: '🎯', style: 'ranged', dmgType: 'physical', spd: 3.0, dmg: 2.8, acc: 1.4, mat: 'wood', qty: 3, crit: NUM.CRIT_PER_SCALE * 0.7 },
   { k: 'fire_staff', nm: ['木火杖', '桦木火杖', '雪松火杖', '紫心火杖', '银杏火杖', '红木火杖', '奥术火杖'], ic: '🔥', style: 'magic', dmgType: 'fire', spd: 2.6, dmg: 2.6, acc: 1.5, mat: 'wood', qty: 2, proc: 'blaze' },
   { k: 'water_staff', nm: ['木水杖', '桦木水杖', '雪松水杖', '紫心水杖', '银杏水杖', '红木水杖', '奥术水杖'], ic: '💧', style: 'magic', dmgType: 'water', spd: 2.6, dmg: 2.6, acc: 1.5, mat: 'wood', qty: 2, proc: 'ripple' },
   { k: 'nature_staff', nm: ['木自然杖', '桦木自然杖', '雪松自然杖', '紫心自然杖', '银杏自然杖', '红木自然杖', '奥术自然杖'], ic: '🍃', style: 'magic', dmgType: 'nature', spd: 2.6, dmg: 2.6, acc: 1.5, mat: 'wood', qty: 2, proc: 'bloom' }
@@ -235,12 +235,12 @@ for (let t = 0; t < 7; t++) {
   const s = TIER_SCALE[t];
   def({
     id: 'ring_' + t, name: RING_NM[t], icon: '💍', cat: 'equip', slot: 'ring', line: 'jewel', tier: t, lvl: TIER_LVL[t],
-    st: { acc: 2 * s, eva: 1 * s, hp: 4 * s, rareFind: 0.004 * s }, price: equipPrice(t),
+    st: { acc: 2 * s, eva: 1 * s, hp: 4 * s, rareFind: NUM.RING_RARE * s }, price: equipPrice(t),
     recipe: { skill: 'crafting', time: 4 + 0.8 * t, xp: Math.round(22 * Math.pow(2.4, t)), in: { [matId('bar', t)]: 1 } }
   });
   def({
     id: 'neck_' + t, name: NECK_NM[t], icon: '📿', cat: 'equip', slot: 'neck', line: 'jewel', tier: t, lvl: TIER_LVL[t],
-    st: { meleeDmg: 1.5 * s, rangedDmg: 1.5 * s, magicDmg: 1.5 * s, hp: 5 * s, wisdom: 0.003 * s }, price: equipPrice(t),
+    st: { meleeDmg: 1.5 * s, rangedDmg: 1.5 * s, magicDmg: 1.5 * s, hp: 5 * s, wisdom: NUM.AMULET_WISDOM * s }, price: equipPrice(t),
     recipe: { skill: 'crafting', time: 4 + 0.8 * t, xp: Math.round(22 * Math.pow(2.4, t)), in: { [matId('bar', t)]: 1 } }
   });
 }
