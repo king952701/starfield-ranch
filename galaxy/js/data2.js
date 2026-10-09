@@ -20,18 +20,19 @@ const ABILITIES = [
 /* ---------- 区域与怪物 ---------- */
 const MONSTERS = {};
 function mkMob(id, name, ic, z, mul, style, dmgType) {
-  const s = Math.pow(2.2, z);
+  /* 全部系数取自 balance.js；dmg 与 pen 的增长必须跟得上玩家护甲的成长
+     （装备属性按 TIER_SCALE 2.4 倍/档增长），否则后期战斗零风险。 */
   const o = {
     id: id, name: name, icon: ic, zone: z, style: style || 'slash', dmgType: dmgType || 'physical',
-    hp: Math.round(40 * s * (mul.hp || 1)),
-    acc: Math.round(30 * Math.pow(1.55, z) * (mul.acc || 1)),
-    eva: Math.round(25 * Math.pow(1.5, z) * (mul.eva || 1)),
-    armor: Math.round(8 * Math.pow(1.7, z) * (mul.armor || 1)),
-    resist: Math.round(6 * Math.pow(1.7, z) * (mul.resist || 1)),
-    dmg: Math.round(7 * Math.pow(1.95, z) * (mul.dmg || 1)),
+    hp: Math.round(NUM.MOB_HP_BASE * Math.pow(NUM.MOB_HP_GROWTH, z) * (mul.hp || 1)),
+    acc: Math.round(NUM.MOB_ACC_BASE * Math.pow(NUM.MOB_ACC_GROWTH, z) * (mul.acc || 1)),
+    eva: Math.round(NUM.MOB_EVA_BASE * Math.pow(NUM.MOB_EVA_GROWTH, z) * (mul.eva || 1)),
+    armor: Math.round(NUM.MOB_ARMOR_BASE * Math.pow(NUM.MOB_ARMOR_GROWTH, z) * (mul.armor || 1)),
+    resist: Math.round(NUM.MOB_RESIST_BASE * Math.pow(NUM.MOB_ARMOR_GROWTH, z) * (mul.resist || 1)),
+    dmg: Math.round(NUM.MOB_DMG_BASE * Math.pow(NUM.MOB_DMG_GROWTH, z) * (mul.dmg || 1)),
     spd: mul.spd || (3.0 - z * 0.08),
-    xp: Math.round(40 * Math.pow(2.5, z) * (mul.xp || 1)),
-    pen: Math.round(2 * Math.pow(1.6, z))
+    xp: Math.round(NUM.MOB_XP_BASE * Math.pow(NUM.MOB_XP_GROWTH, z) * (mul.xp || 1)),
+    pen: Math.round(NUM.MOB_PEN_BASE * Math.pow(NUM.MOB_PEN_GROWTH, z))
   };
   MONSTERS[id] = o;
   return o;
@@ -53,6 +54,7 @@ ZONE_DEFS.forEach(function (zd, z) {
   const b = zd.boss;
   const bo = mkMob(b[0], b[1], b[2], z, b[3] || {}, 'slash', (b[3] || {}).dmgType);
   bo.boss = true;
+  bo.dmg = Math.round(bo.dmg * NUM.BOSS_DMG_MUL);   /* Boss 不能只是血厚 */
   bo.ability = { name: '湮灭冲击', cd: 12, mult: 2.4, mp: 0 };
 });
 

@@ -1584,7 +1584,8 @@ var MUI = {
       '<div class="ds">每 ' + (taskInterval() / 3600000) + ' 小时生成，上限 ' + taskSlots() + ' 个</div></span>' +
       '<span class="lv">' + S.tokens + '<em>代币</em></span></div>' +
       '<div class="chips"><span class="chip">⏳下次 <b>' + fmtTime(left / 1000) + '</b></span>' +
-      '<span class="chip">🎯任务点 <b>' + S.taskPoints + '</b></span></div></div>';
+      /* 同上：taskPoints 是完成数统计，不是可消费货币 */
+      '<span class="chip">🎯已完成 <b>' + (S.taskPoints || 0) + '</b> 个任务</span></div></div>';
 
     for (var i = 0; i < S.tasks.length; i++) {
       var t = S.tasks[i];
@@ -2157,7 +2158,7 @@ var MUI = {
 
     var boxes = [
       ['完成动作', fmt(S.stats.actions)], ['击杀怪物', fmt(S.stats.kills)],
-      ['战死次数', fmt(S.stats.deaths)], ['累计金币', fmt(S.stats.earned)],
+      ['战死次数', fmt(S.stats.deaths)], ['累计收入', fmt(S.stats.earned)], ['累计支出', fmt(S.stats.spent)],
       ['离线时长', fmtTime(S.stats.offline)], ['总等级', totalLevel()],
       ['战斗等级', combatLevel().toFixed(1)], ['专精总等级', SKILLS.reduce(function (t, s) { return t + (s.id === 'combat' ? 0 : masteryTotal(s.id)); }, 0)]
     ];

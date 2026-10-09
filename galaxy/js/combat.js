@@ -54,8 +54,13 @@ const Combat = {
   },
   mitigate: function (dmg, def, pen) {
     /* 穿甲超过防御时原公式会反向放大伤害且没有上限，这里把差值钳到 -100（最多 2 倍） */
-    const d = Math.max(NUM.MITIGATION_MIN_D, def - pen);
-    return d >= 0 ? dmg * 100 / (100 + d) : dmg * (100 - d) / 100;
+    const raw = Math.max(NUM.MITIGATION_MIN_D, def - pen);
+    if (raw <= 0) return dmg * (100 - raw) / 100;
+    /* 护甲收益衰减：超过 ARMOR_SOFT_KNEE 后每点护甲的边际收益下降。
+       否则后期全套装备（数千点护甲）会把怪物伤害压到个位数 —— 实测后期每击约 9 点、
+       玩家 1.1 万 HP，战斗完全没有失败可能。前期护甲小，衰减几乎不起作用。 */
+    const eff = raw / (1 + raw / NUM.ARMOR_SOFT_KNEE);
+    return dmg * 100 / (100 + eff);
   },
 
   /* ---------- 开始 / 停止 ---------- */
@@ -312,8 +317,8 @@ const Combat = {
     const c = S.combat;
     c.active = false;
     S.stats.deaths++;
-    const lost = Math.round(S.gold * 0.02);
-    S.gold = Math.max(0, S.gold - lost);
+    const lost = Math.min(S.gold, Math.round(S.gold * NUM.DEATH_GOLD_LOSS));
+    spendGold(lost);
     Combat.say('💀 你被击倒了！损失 ' + fmt(lost) + ' 金币', 'kill');
     c.hp = 1;
     pushLog('💀 战斗失败：在' + ZONE_DEFS.filter(function (x) { return x.id === c.zone; })[0].name + '被击倒');

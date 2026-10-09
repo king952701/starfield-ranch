@@ -122,7 +122,15 @@ function takeItems(req) {
   UI.dirty = true;
   return true;
 }
-function addGold(n) { S.gold = Math.max(0, Math.round(S.gold + n)); if (n > 0) S.stats.earned += Math.round(n); UI.dirty = true; }
+/* 金币唯一出入口：收入记 earned、支出记 spent。
+   此前 spent 恒为 0（只有被丢弃的 `S.stats.spent += 0`），玩家永远看不到自己花了多少。 */
+function addGold(n) {
+  S.gold = Math.max(0, Math.round(S.gold + n));
+  if (n > 0) S.stats.earned += Math.round(n);
+  else if (n < 0) S.stats.spent += Math.round(-n);
+  UI.dirty = true;
+}
+function spendGold(n) { addGold(-Math.abs(n)); }
 
 /* ---------- 等级 ---------- */
 function skillLevel(id) { return levelOf(S.skills[id] || 0, LVL_XP); }

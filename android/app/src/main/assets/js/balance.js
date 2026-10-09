@@ -40,7 +40,19 @@ var NUM = {
   CRIT_SOFT_MAX: 0.75,          /* 暴击软上限的可达增量 */
   CRIT_SOFT_K: 2,               /* 软上限陡度 */
   MITIGATION_MIN_D: -100,       /* 穿甲超过防御时最多放大 2 倍 */
+  ARMOR_SOFT_KNEE: 3000,        /* 护甲收益衰减拐点：等效护甲 = d / (1 + d/3000) */
   AUTO_EAT_HP: 0.4,             /* HP 低于 40% 自动进食 */
+
+  /* ---- 怪物曲线（Story TR-combat-004）---- */
+  MOB_HP_BASE: 40,      MOB_HP_GROWTH: 2.2,
+  MOB_ACC_BASE: 30,     MOB_ACC_GROWTH: 1.55,
+  MOB_EVA_BASE: 25,     MOB_EVA_GROWTH: 1.5,
+  MOB_ARMOR_BASE: 8,    MOB_ARMOR_GROWTH: 1.7,
+  MOB_RESIST_BASE: 6,
+  MOB_DMG_BASE: 7,      MOB_DMG_GROWTH: 2.6,   /* 原 1.95：后期伤害被护甲压到个位数 */
+  MOB_PEN_BASE: 2,      MOB_PEN_GROWTH: 1.7,   /* 原 1.6：穿甲跟不上护甲成长 */
+  MOB_XP_BASE: 40,      MOB_XP_GROWTH: 2.5,
+  BOSS_DMG_MUL: 1.5,    /* Boss 额外伤害倍率 */
 
   /* ---- 装备属性量纲（Story TR-combat-001）---- */
   RING_RARE: 0.0008,            /* 原 0.004：t6 +144% → +29% */

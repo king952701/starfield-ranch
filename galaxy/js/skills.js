@@ -202,7 +202,7 @@ function queueUnlock() {
   }
   if (S.gold < c.gold) lack.push('金币 ' + fmt(c.gold));
   if (lack.length) { UI.toast('材料不足：' + lack.join('、')); return false; }
-  addGold(-c.gold);
+  spendGold(c.gold);
   takeItems(c.items);
   S.queueSlots = nx.slot;
   pushLog('⚙ 工作队列扩充到第 ' + nx.slot + ' 格');
@@ -487,7 +487,7 @@ function rerollTask(id, useBell) {
   if (i < 0) return;
   const cost = useBell ? 1 : 10000;
   if (useBell) { if (S.cowbell < cost) { UI.toast('牛铃不足'); return; } S.cowbell -= cost; }
-  else { if (S.gold < cost) { UI.toast('金币不足'); return; } S.gold -= cost; }
+  else { if (S.gold < cost) { UI.toast('金币不足'); return; } spendGold(cost); }
   S.tasks.splice(i, 1);
   genTask();
   UI.dirty = true;
@@ -538,7 +538,7 @@ function fillOrder(oid) {
   } else {
     const g = Math.round(ITEMS[o.item].price * o.mul * n);
     if (S.gold < g) { UI.toast('金币不足'); return; }
-    S.gold -= g;
+    spendGold(g);
     addItem(o.item, n);
     pushLog('完成订单：购入 ' + n + ' × ' + ITEMS[o.item].name + '，-' + fmt(g) + ' 金币');
     o.left = 0;
@@ -757,7 +757,7 @@ function ahPost(item, qty, start, buyout, durId) {
   const dep = ahDeposit(item, qty, dur.mul);
   if (S.gold < dep) { UI.toast('押金不足（需 ' + fmt(dep) + '）'); return false; }
   takeItems({ [item]: qty });
-  S.gold -= dep;
+  spendGold(dep);
   S.ah.listings.unshift({
     id: 'a' + (S.ah.seq++), item: item, qty: qty, start: start, buyout: buyout,
     bid: 0, bidder: null, mine: true, seller: S.name, dur: dur.id,
@@ -783,7 +783,7 @@ function ahBid(id) {
   const refund = (l.bidder === 'me') ? l.bid * l.qty : 0;
   const need = total - refund;
   if (S.gold < need) { UI.toast('金币不足（还需 ' + fmt(need) + '）'); return; }
-  S.gold -= need;
+  spendGold(need);
   l.bid = price; l.bidder = 'me';
   pushLog('竞标 ' + ITEMS[l.item].name + ' ×' + l.qty + ' @ ' + fmt(price) + '/个');
   UI.dirty = true;
@@ -795,7 +795,7 @@ function ahBuyout(id) {
   const refund = (l.bidder === 'me') ? l.bid * l.qty : 0;
   const need = l.buyout * l.qty - refund;
   if (S.gold < need) { UI.toast('金币不足（还需 ' + fmt(need) + '）'); return; }
-  S.gold -= need;
+  spendGold(need);
   addItem(l.item, l.qty);
   pushLog('一口价购入 ' + l.qty + ' × ' + ITEMS[l.item].name + '，-' + fmt(l.buyout * l.qty) + ' 金币');
   l.done = true; l.result = 'sold'; l.bidder = 'me';
@@ -872,7 +872,7 @@ function houseUpgrade(id) {
     UI.toast('资源不足：需要 ' + fmt(c.gold) + ' 金币、' + c.wood + '×' + ITEMS[woodId].name + '、' + c.food + '×' + ITEMS[foodId].name);
     return;
   }
-  S.gold -= c.gold;
+  spendGold(c.gold);
   takeItems({ [woodId]: c.wood, [foodId]: c.food });
   S.houses[id] = lv + 1;
   pushLog('🏠 ' + h.name + ' 升至 ' + (lv + 1) + ' 级');
@@ -913,7 +913,7 @@ function extrapolateOffline(scale, b0, xp0, g0) {
     if (d > 0) S.bank[k] = (S.bank[k] || 0) + Math.round(d * scale);
   }
   const dg = S.gold - g0;
-  if (dg > 0) S.gold += Math.round(dg * scale);
+  if (dg > 0) addGold(Math.round(dg * scale));   /* 走统一入口，否则不计入累计收入 */
   SKILLS.forEach(function (s) {
     if (s.id === 'combat') return;
     const d = (S.skills[s.id] || 0) - (xp0[s.id] || 0);

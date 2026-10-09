@@ -315,7 +315,8 @@ Object.assign(UI, {
     const left = Math.max(0, S.nextTask - Date.now());
     let h = '<div class="ph"><div class="phic">📜</div><div class="phtxt"><h2>任务板</h2><p>每 ' + (taskInterval() / 3600000) + ' 小时生成新任务，上限 ' + taskSlots() + ' 个。完成任务获得金币与任务代币。</p></div>' +
       '<div class="phlv"><b>' + S.tokens + '</b><span>任务代币</span></div></div>';
-    h += '<div class="chips"><div class="chip">⏳ 下次任务 ' + fmtTime(left / 1000) + '</div><div class="chip">🎯 任务点 ' + S.taskPoints + '</div></div>';
+    /* taskPoints 只做「累计完成任务数」统计，不消费也不兑换；文案必须说清，避免被当成货币 */
+    h += '<div class="chips"><div class="chip">⏳ 下次任务 ' + fmtTime(left / 1000) + '</div><div class="chip">🎯 已完成任务 ' + (S.taskPoints || 0) + ' 个</div></div>';
     h += '<div class="tasks">';
     if (!S.tasks.length) h += '<div class="dim">暂无任务</div>';
     S.tasks.forEach(function (t) {
@@ -581,6 +582,7 @@ Object.assign(UI, {
     h += UI.statBox('击杀怪物', fmt(S.stats.kills));
     h += UI.statBox('战死次数', fmt(S.stats.deaths));
     h += UI.statBox('累计获得金币', fmt(S.stats.earned));
+    h += UI.statBox('累计支出金币', fmt(S.stats.spent));
     h += UI.statBox('累计离线时长', fmtTime(S.stats.offline));
     h += UI.statBox('总等级', totalLevel());
     h += UI.statBox('战斗等级', combatLevel().toFixed(1));
