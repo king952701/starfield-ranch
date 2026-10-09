@@ -11,7 +11,7 @@ const ABILITIES = [
   { id: 'rain', name: '箭雨', icon: '🌧️', style: 'ranged', mp: 18, cd: 9, mult: 1.6, targets: 'all', lvl: 10, desc: '对全体敌人造成 160% 伤害' },
   { id: 'precision', name: '精准', icon: '🎯', style: 'ranged', mp: 16, cd: 25, buff: { acc: 0.35, dur: 12 }, targets: 0, lvl: 25, desc: '12 秒内命中 +35%' },
   { id: 'fireball', name: '火球', icon: '🔥', style: 'magic', mp: 12, cd: 5, mult: 2.0, targets: 1, lvl: 1, desc: '对单体造成 200% 火焰伤害' },
-  { id: 'icespear', name: '冰矛', icon: '❄️', style: 'magic', mp: 14, cd: 6, mult: 1.85, targets: 1, lvl: 8, desc: '对单体造成 185% 流水伤害' },
+  { id: 'icespear', name: '冰矛', icon: '❄️', style: 'magic', mp: 14, cd: 6, mult: 1.85, targets: 1, lvl: 8, desc: '对单体造成 185% 冰霜伤害' },
   { id: 'storm', name: '星暴', icon: '🌠', style: 'magic', mp: 24, cd: 12, mult: 1.7, targets: 'all', lvl: 30, desc: '对全体敌人造成 170% 伤害' },
   { id: 'toughness', name: '坚韧', icon: '🛡️', style: 'any', mp: 15, cd: 35, buff: { armor: 0.5, dur: 15 }, targets: 0, lvl: 15, desc: '15 秒内护甲 +50%' },
   { id: 'meditate', name: '冥想', icon: '🧘', style: 'any', mp: 0, cd: 40, buff: { regen: 3, dur: 10 }, targets: 0, lvl: 12, desc: '10 秒内每秒回复 3% 内力' }
@@ -86,13 +86,13 @@ const TASK_DIFF = [
 
 /* ---------- 代币商店 ---------- */
 const TOKEN_SHOP = [
-  { id: 't_cd1', name: '任务冷却 -1 小时', cost: 100, max: 1, desc: '任务生成间隔 8h → 7h' },
-  { id: 't_cd2', name: '任务冷却 -1 小时', cost: 200, max: 1, desc: '任务生成间隔 7h → 6h', need: 't_cd1' },
-  { id: 't_cd3', name: '任务冷却 -1 小时', cost: 400, max: 1, desc: '任务生成间隔 6h → 5h', need: 't_cd2' },
-  { id: 't_cd4', name: '任务冷却 -1 小时', cost: 800, max: 1, desc: '任务生成间隔 5h → 4h', need: 't_cd3' },
+  { id: 't_cd1', name: '任务冷却 -1 小时 Ⅰ', cost: 100, max: 1, desc: '任务生成间隔 8h → 7h' },
+  { id: 't_cd2', name: '任务冷却 -1 小时 Ⅱ', cost: 200, max: 1, desc: '任务生成间隔 7h → 6h', need: 't_cd1' },
+  { id: 't_cd3', name: '任务冷却 -1 小时 Ⅲ', cost: 400, max: 1, desc: '任务生成间隔 6h → 5h', need: 't_cd2' },
+  { id: 't_cd4', name: '任务冷却 -1 小时 Ⅳ', cost: 800, max: 1, desc: '任务生成间隔 5h → 4h', need: 't_cd3' },
   { id: 't_slot', name: '+1 任务栏位', cost: 250, max: 6, desc: '任务板上限 +1（基础 6）' },
-  { id: 't_off1', name: '离线时长 +6 小时', cost: 300, max: 1, desc: '离线结算上限 24h → 30h' },
-  { id: 't_off2', name: '离线时长 +6 小时', cost: 700, max: 1, desc: '离线结算上限 30h → 36h', need: 't_off1' },
+  { id: 't_off1', name: '离线时长 +6 小时 Ⅰ', cost: 300, max: 1, desc: '离线结算上限 24h → 30h' },
+  { id: 't_off2', name: '离线时长 +6 小时 Ⅱ', cost: 700, max: 1, desc: '离线结算上限 30h → 36h', need: 't_off1' },
   { id: 't_rate', name: '任务奖励 +25%', cost: 500, max: 4, desc: '任务金币与代币奖励 +25%' },
   { id: 't_dmg', name: '任务徽章 · 伤害', cost: 600, max: 5, desc: '全局伤害 +4%' },
   { id: 't_spd', name: '任务徽章 · 速度', cost: 600, max: 5, desc: '全局动作速度 +4%' }
@@ -100,7 +100,7 @@ const TOKEN_SHOP = [
 
 /* ---------- 牛铃商店 ---------- */
 const BELL_SHOP = [
-  { id: 'b_bell5', name: '牛铃 ×5', cost: 0, kind: 'pack', desc: '（示例：充值入口）', disabled: true },
+  { id: 'b_dlv', name: '牛铃补给箱 ×5', cost: 0, kind: 'pack', desc: '暂未开放，敬请期待', disabled: true },
   { id: 'b_offline', name: '离线时长 +12 小时', cost: 3, max: 2, desc: '离线结算上限 +12 小时' },
   { id: 'b_xp', name: '全局经验 +10%', cost: 5, max: 5, desc: '所有技能经验 +10%' },
   { id: 'b_rare', name: '稀有发现 +5%', cost: 4, max: 5, desc: '所有稀有掉落几率 +5%' },
@@ -128,4 +128,4 @@ const CHAT_LINES = [
 ];
 
 /* ---------- 排行榜 NPC ---------- */
-const NPC_NAMES = ['奶牛大魔王', '星尘小笼包', '奶酪超人', '银河摆渡人', '沐莓奶茶', '奥术老张', '彩虹牛牛', '虚空摸鱼王', '超新星咸鱼', '挤奶工小李', '苔藓史莱姆', '牛铃收藏家', '铁斧阿强', '钓鱼佬老王', '星海第一奶'];
+const NPC_NAMES = ['奶牛大魔王', '星尘小笼包', '奶酪游侠', '银河摆渡人', '沐莓奶茶', '奥术老张', '彩虹牛牛', '虚空摸鱼王', '超新星咸鱼', '挤奶工小李', '苔藓史莱姆', '牛铃收藏家', '铁斧阿强', '钓鱼佬老王', '星海第一牧'];

@@ -33,7 +33,8 @@ var MUI = {
     ['skill', '技能', '🧺'], ['queue', '队列', '⏳'], ['combat', '战斗', '⚔️'], ['bag', '背包', '🎒'],
     ['equip', '装备', '🛡️'], ['mastery', '专精', '✦'], ['task', '任务', '📜'],
     ['market', '拍卖', '🏪'], ['vendor', '商人', '💱'], ['house', '牧场', '🏠'],
-    ['social', '社交', '🌐'], ['ach', '成就', '🏆'], ['stats', '统计', '📊']
+    ['social', '社交', '🌐'], ['ach', '成就', '🏆'], ['stats', '统计', '📊'],
+    ['about', '关于', 'ℹ️']
   ],
   /* 成就面板 */
   achCat: 'all',
@@ -638,6 +639,7 @@ var MUI = {
     if (t === 'house') return MUI.pHouse();
     if (t === 'social') return MUI.pSocial();
     if (t === 'ach') return MUI.pAch();
+    if (t === 'about') return MUI.pAbout();
     if (t === 'stats') return MUI.pStats();
     return '';
   },
@@ -781,6 +783,45 @@ var MUI = {
         (i === 1 ? '队列 #1（优先）' : '队列 #' + i) + '</option>';
     }
     return o;
+  },
+
+  /* -------- 关于 / 美术资源致谢 -------- */
+  pAbout: function () {
+    var h = '<div class="card"><div class="skhd">' +
+      '<span class="ic">ℹ️</span><span><div class="nm">关于星海牧场</div>' +
+      '<div class="ds">🐄 银河牧场放置养成 · 单机离线可玩</div></span></div>' +
+      '<div class="mp-v">《星海牧场》是一款以「养殖 → 加工 → 制造 → 交易」长产业链为核心的放置养成游戏。' +
+      '全部代码、数值设计与文本内容均为本项目原创撰写，未使用任何游戏引擎或第三方游戏素材。</div></div>';
+
+    h += '<div class="hd"><h3>🎨 美术资源致谢</h3></div><div class="card">';
+    h += '<div class="abt"><b>界面</b><span>全部由 CSS 手绘完成（渐变、边框与圆角），' +
+      '未使用任何背景贴图。</span></div>';
+    h += '<div class="abt"><b>图标</b><span>全部为 Unicode 表情字符（Emoji），' +
+      '以文字形式排入界面，不含图片文件，由<b>设备系统字体</b>现场渲染。' +
+      'Android 设备上通常来自 <b>Noto Emoji</b> 系列。</span></div>';
+    h += '<div class="abt"><b>字体</b><span>使用系统默认字体栈，项目内未打包任何字体文件。</span></div>';
+    h += '<div class="abt"><b>音效 / 音乐</b><span>本作不含任何音频素材，也没有背景音乐。</span></div>';
+    h += '</div>';
+
+    h += '<div class="hd"><h3>📜 第三方许可与声明</h3></div><div class="card">';
+    h += '<div class="abt"><b>Unicode 与 Emoji</b><span>字符编码遵循 Unicode 标准；' +
+      '字形设计与版权归各自的字体项目及 Unicode 联盟所有。</span></div>';
+    h += '<div class="abt"><b>Noto Emoji</b><span>Google 发布，' +
+      '字体部分采用 SIL Open Font License 1.1，图形部分采用 CC BY 4.0 授权。</span></div>';
+    h += '<div class="abt"><b>技术栈</b><span>HTML + CSS + 原生 JavaScript，' +
+      '通过 WebView 封装为安卓应用，未接入任何统计、广告或支付 SDK。</span></div>';
+    h += '<div class="abt"><b>隐私</b><span>游戏进度仅保存在本机，' +
+      '不上传、不联网，不会收集任何个人信息。</span></div>';
+    h += '</div>';
+
+    h += '<div class="hd"><h3>⚖️ 原创声明</h3></div><div class="card">' +
+      '<div class="mp-v">本作的人物设定、物品名称、技能与战斗数值、任务与世界频道文本均为独立创作。' +
+      '若您认为本作内容侵犯了您的合法权益，烦请通过发布页面留言与我们联系并提供权属证明，' +
+      '我们会在核实后第一时间处理。</div></div>';
+
+    h += '<div class="card dim" style="text-align:center">🌌 感谢每一位来到星海牧场的牧牛人<br>' +
+      '愿你的仓库堆满银河奶，强化一路 +10</div>';
+    return h;
   },
 
   /* -------- 成就殿堂 -------- */
@@ -1178,7 +1219,7 @@ var MUI = {
     for (var i = 0; i < st.length; i++) { total += st[i].gold; tq += st[i].qty; }
 
     var h = '<div class="card"><div class="skhd">' +
-      '<span class="ic">👤</span><span><div class="nm">杂货商 · 老麦</div>' +
+      '<span class="ic">👤</span><span><div class="nm">杂货商 · 麦老伯</div>' +
       '<div class="ds">以固定品质价即时回购各类物资，价格远低于拍卖行，但立刻到账</div></span>' +
       '<span class="lv">' + fmt(S.gold) + '<em>金币</em></span></div>' +
       '<div class="tips dim">回购是金币回收的主渠道：承担较大的价格折让，用来抑制后期物资堆积导致的通货膨胀。想卖高价请挂拍卖行。</div></div>';
@@ -1268,7 +1309,7 @@ var MUI = {
   /* -------- 专精 -------- */
   pMastery: function () {
     var h = '<div class="card"><div class="skhd">' +
-      '<span class="ic">✦</span><span><div class="nm">专精 Mastery</div>' +
+      '<span class="ic">✦</span><span><div class="nm">专精</div>' +
       '<div class="ds">25% 专精经验注入专精池，10/25/50/95% 触发强力加成</div></span></div></div>';
     h += MUI.skillChips();
 
@@ -1354,7 +1395,7 @@ var MUI = {
     return h;
   },
 
-  /* -------- 拍卖行（魔兽世界风格） -------- */
+  /* -------- 拍卖行 -------- */
   pMarket: function () {
     ahRefresh(false);
     var mine = 0;

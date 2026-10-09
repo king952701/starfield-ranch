@@ -1,6 +1,6 @@
 /* ============================================================
  *  星海牧场 · 手机版样式
- *  兼容 UC浏览器(U3/U4) / QQ浏览器(X5) / 联想浏览器(WebView)
+ *  兼容老旧移动端内核（X5 / U3 / U4 / WebView）
  *  规则：不使用 CSS Grid、gap、gap(flex)、aspect-ratio、min()、clamp()、
  *        inset、:is()、position:sticky 之外的前沿特性；全部加 -webkit- 前缀。
  * ============================================================ */
@@ -208,6 +208,24 @@ body {
 .qrow .ahbt button { margin-bottom: 3px; }
 .chip.lack { border-color: #5a2a30; color: #f0645f; }
 .chip.lack b { color: #f0645f; }
+
+/* ---------- 关于 / 致谢 ---------- */
+.abt {
+  padding: 6px 0;
+  border-bottom: 1px solid #1a2138;
+  font-size: 11px;
+  line-height: 1.65;
+  color: #b8c2e0;
+}
+.abt:last-child { border-bottom: 0; }
+.abt b {
+  display: inline-block;
+  min-width: 66px;
+  margin-right: 6px;
+  color: #f2c14e;
+  font-weight: 400;
+}
+.abt span b { display: inline; min-width: 0; margin: 0; color: #e8ecff; font-weight: 700; }
 
 /* ---------- 成就行 ---------- */
 .achrow {

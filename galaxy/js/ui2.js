@@ -255,7 +255,7 @@ Object.assign(UI, {
 
   /* ---------------- 专精面板 ---------------- */
   pMastery: function () {
-    let h = '<div class="ph"><div class="phic">✦</div><div class="phtxt"><h2>专精（Mastery）</h2><p>灵感来自 Melvor Idle：每个动作都有独立专精等级；25% 专精经验注入专精池，达到 10/25/50/95% 检查点可获得强力加成。</p></div></div>';
+    let h = '<div class="ph"><div class="phic">✦</div><div class="phtxt"><h2>专精</h2><p>每个动作都有独立专精等级；25% 专精经验注入专精池，达到 10/25/50/95% 检查点可获得强力加成。</p></div></div>';
     SKILLS.forEach(function (s) {
       if (s.id === 'combat') return;
       const cap = poolCap(s.id);

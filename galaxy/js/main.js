@@ -29,7 +29,7 @@ const Game = {
     w.style.display = 'flex';
     w.innerHTML = '<div class="modal start">' +
       '<h1>🐄 星海牧场 · 银河放置传说</h1>' +
-      '<p class="sub">融合《银河奶牛放置》的产业链与《梅尔沃放置》的专精体系</p>' +
+      '<p class="sub">原创银河牧场模拟 · 长产业链 × 专精养成</p>' +
       '<div class="frow"><label>角色名</label><input id="pname" maxlength="10" value="牧牛人"></div>' +
       '<div class="frow"><label>服务器</label><select id="pserver">' +
       ['星海一区', '星海二区', '银河新区', '沐莓小镇'].map(function (s) { return '<option>' + s + '</option>'; }).join('') +

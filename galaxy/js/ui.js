@@ -162,7 +162,8 @@ const UI = {
     const t = [
       ['skill', '技能', '🧺'], ['combat', '战斗', '⚔️'], ['equip', '装备', '🛡️'],
       ['bank', '银行', '🎒'], ['mastery', '专精', '✦'], ['market', '市场', '🏪'],
-      ['task', '任务', '📜'], ['house', '牧场', '🏠'], ['social', '社交', '🌐'], ['stats', '统计', '📊']
+      ['task', '任务', '📜'], ['house', '牧场', '🏠'], ['social', '社交', '🌐'], ['stats', '统计', '📊'],
+      ['about', '关于', 'ℹ️']
     ];
     document.getElementById('tabs').innerHTML = t.map(function (x) {
       return '<div class="tab' + (UI.tab === x[0] ? ' on' : '') + '" data-act="tab" data-a="' + x[0] + '">' + x[2] + '<span>' + x[1] + '</span></div>';
@@ -307,7 +308,44 @@ const UI = {
       case 'house': return UI.pHouse();
       case 'social': return UI.pSocial();
       case 'stats': return UI.pStats();
+      case 'about': return UI.pAbout();
     }
     return '';
+  },
+
+  /* ---------- 关于 / 美术资源致谢 ---------- */
+  pAbout: function () {
+    let h = '<div class="ph"><div class="phic">ℹ️</div><div class="phtxt">' +
+      '<h2>关于星海牧场</h2><p>🐄 银河牧场放置养成 · 单机离线可玩</p></div></div>';
+    h += '<p style="font-size:12px;line-height:1.8;margin-bottom:12px">' +
+      '《星海牧场》是一款以「养殖 → 加工 → 制造 → 交易」长产业链为核心的放置养成游戏。' +
+      '全部代码、数值设计与文本内容均为本项目原创撰写，未使用任何游戏引擎或第三方游戏素材。</p>';
+
+    const rows = [
+      ['界面', '全部由 CSS 手绘完成（渐变、边框与圆角），未使用任何背景贴图。'],
+      ['图标', '全部为 Unicode 表情字符（Emoji），以文字形式排入界面，不含图片文件，由<b>设备系统字体</b>现场渲染；Android 设备上通常来自 <b>Noto Emoji</b> 系列。'],
+      ['字体', '使用系统默认字体栈，项目内未打包任何字体文件。'],
+      ['音效 / 音乐', '本作不含任何音频素材，也没有背景音乐。'],
+      ['Unicode 与 Emoji', '字符编码遵循 Unicode 标准；字形设计与版权归各自的字体项目及 Unicode 联盟所有。'],
+      ['Noto Emoji', 'Google 发布，字体部分采用 SIL Open Font License 1.1，图形部分采用 CC BY 4.0 授权。'],
+      ['技术栈', 'HTML + CSS + 原生 JavaScript，未接入任何统计、广告或支付 SDK。'],
+      ['隐私', '游戏进度仅保存在本机浏览器，不上传、不联网，不会收集任何个人信息。']
+    ];
+    h += '<h3 style="font-size:13px;color:var(--gold);margin:10px 0 6px">🎨 美术资源致谢</h3>';
+    h += '<div style="font-size:12px;line-height:1.9">' + rows.slice(0, 4).map(function (r) {
+      return '<div><b style="color:var(--gold)">' + r[0] + '</b>：' + r[1] + '</div>';
+    }).join('') + '</div>';
+    h += '<h3 style="font-size:13px;color:var(--gold);margin:12px 0 6px">📜 第三方许可与声明</h3>';
+    h += '<div style="font-size:12px;line-height:1.9">' + rows.slice(4).map(function (r) {
+      return '<div><b style="color:var(--gold)">' + r[0] + '</b>：' + r[1] + '</div>';
+    }).join('') + '</div>';
+    h += '<h3 style="font-size:13px;color:var(--gold);margin:12px 0 6px">⚖️ 原创声明</h3>';
+    h += '<p style="font-size:12px;line-height:1.8">' +
+      '本作的人物设定、物品名称、技能与战斗数值、任务与世界频道文本均为独立创作。' +
+      '若您认为本作内容侵犯了您的合法权益，烦请通过发布页面留言与我们联系并提供权属证明，' +
+      '我们会在核实后第一时间处理。</p>';
+    h += '<p style="text-align:center;color:var(--dim);font-size:12px;margin-top:14px">' +
+      '🌌 感谢每一位来到星海牧场的牧牛人<br>愿你的仓库堆满银河奶，强化一路 +10</p>';
+    return h;
   }
 };
