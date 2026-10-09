@@ -337,6 +337,10 @@ var MUI = {
     }
     else if (a === 'sfx-test') { if (window.SFX) window.SFX.play(x); }
     /* ---- 排行榜 / 玩家档案 ---- */
+    /* ---- 首启引导 ---- */
+    else if (a === 'tut-goto') { MUI.tab = x; MUI.dirty = true; }
+    else if (a === 'tut-skip') { if (window.Tutorial) Tutorial.skipAll(); }
+    else if (a === 'tut-restart') { if (window.Tutorial) Tutorial.restart(); }
     else if (a === 'lbcat') { MUI.lbCat = x; MUI.dirty = true; }
     else if (a === 'hero') { if (x && heroOf(x)) { MUI.heroId = x; sfxEvt('open'); MUI.renderHero(); } }
     else if (a === 'heroclose') { MUI.heroId = null; sfxEvt('close'); MUI.renderHero(); }
@@ -587,6 +591,12 @@ var MUI = {
     MUI.lastRender = Date.now();
   },
 
+  /* 顶部引导目标条（模块缺失时静默为空，不影响主流程） */
+  tutorialBar: function () {
+    try { if (window.Tutorial) return Tutorial.bar(); } catch (e) { }
+    return '';
+  },
+
   renderRes: function () {
     var h = '<span class="mres-logo">🐄</span>';
     h += '<span class="mres-i">💰<b>' + fmt(S.gold) + '</b></span>';
@@ -642,6 +652,9 @@ var MUI = {
 
   /* ---------------- 面板 ---------------- */
   panel: function () {
+    return MUI.tutorialBar() + MUI.panelBody();
+  },
+  panelBody: function () {
     var t = MUI.tab;
     if (t === 'skill') return MUI.pSkill();
     if (t === 'queue') return MUI.pQueue();
@@ -808,6 +821,19 @@ var MUI = {
       '<div class="ds">🐄 银河牧场放置养成 · 单机离线可玩</div></span></div>' +
       '<div class="mp-v">《星海牧场》是一款以「养殖 → 加工 → 制造 → 交易」长产业链为核心的放置养成游戏。' +
       '全部代码、数值设计与文本内容均为本项目原创撰写，未使用任何游戏引擎或第三方游戏素材。</div></div>';
+
+    /* ---- 新人引导 ---- */
+    if (window.Tutorial) {
+      var tSt = Tutorial.ready();
+      var stTxt = tSt.skip ? '已跳过' : (tSt.step >= Tutorial.steps.length ? '已全部完成' : ('进行中 ' + tSt.step + '/' + Tutorial.steps.length));
+      h += '<div class="hd"><h3>🎯 新人引导</h3></div><div class="card">' +
+        '<div class="abt"><b>状态</b><span>' + stTxt + '</span></div>' +
+        '<div class="abt"><b>操作</b><span>' +
+        '<button class="mini" data-act="tut-restart">重来一次</button> ' +
+        '<button class="mini" data-act="tut-skip">跳过</button></span></div>' +
+        '<div class="dim" style="font-size:10px;margin-top:4px">引导会以顶部目标条的形式出现，达成后自动发奖，不打断游玩。</div>' +
+        '</div>';
+    }
 
     /* ---- 音效设置 ---- */
     var hasSFX = !!window.SFX;

@@ -110,6 +110,7 @@ var MGame = {
     if (MGame.slowT >= 1) {
       MGame.slowT = 0;
       tickTasks();
+      if (window.Tutorial) Tutorial.check();   /* 首启引导：每秒检查目标是否达成 */
       refreshMarket(false);
       ahTick();          /* 拍卖行：竞价与到期结算 */
       MGame.chatT++;

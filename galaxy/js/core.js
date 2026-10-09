@@ -71,6 +71,7 @@ function newGame(name) {
   S.alchTarget = 'milk';
   S.bag = { cupcake: 3 };
   S.tasks = []; S.shop = {}; S.bell = {}; S.buffs = []; S.chat = [];
+  S.tut = { step: 0 };   /* 首启引导从头开始 */
   S.combat = null; S.action = null;
   S.queue = [];
   S.queueSlots = Q_SLOT_DEFAULT;

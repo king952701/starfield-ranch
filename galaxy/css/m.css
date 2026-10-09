@@ -276,6 +276,51 @@ body {
 .volsl { display: inline-block; width: 100%; max-width: 150px; vertical-align: middle; }
 .volsl input { display: block; width: 100%; }
 
+/* ---------- 首启引导目标条 ---------- */
+.tutbar {
+  background: linear-gradient(180deg, #17203c, #101730);
+  border: 1px solid #b98b2a;
+  border-radius: 10px;
+  padding: 7px 9px;
+  margin-bottom: 8px;
+}
+.tut-h {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-box-align: center;
+  -webkit-align-items: center;
+  align-items: center;
+}
+.tut-i { -webkit-flex: 0 0 auto; flex: 0 0 auto; margin-right: 5px; font-size: 14px; }
+.tut-h b {
+  -webkit-box-flex: 1;
+  -webkit-flex: 1 1 auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12px;
+  color: #f2c14e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tut-h .mini { -webkit-flex: 0 0 auto; flex: 0 0 auto; margin-left: 4px; padding: 2px 7px; font-size: 10px; }
+.tut-t { font-size: 10px; color: #8892b8; margin: 3px 0 4px; line-height: 1.4; }
+.tut-bar {
+  height: 5px;
+  background: #080d1c;
+  border: 1px solid #232c50;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.tut-bar i {
+  display: block;
+  height: 100%;
+  background: -webkit-linear-gradient(left, #8a6b1f, #f2c14e);
+  background: linear-gradient(90deg, #8a6b1f, #f2c14e);
+}
+.tut-p { font-size: 9px; color: #6f7ba3; margin-top: 2px; text-align: right; }
+
 /* ---------- 排行榜：类别切换 ---------- */
 .lbtabs {
   display: -webkit-box;
