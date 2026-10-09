@@ -43,6 +43,13 @@ var MUI = {
   /* 排行榜 */
   lbCat: 'total',
   heroId: null,
+  /* 存档备份 */
+  buImpOpen: false,
+  buImpTxt: '',
+  buExpTxt: '',
+  buErr: '',
+  buPending: null,
+  buRestoreAsk: -1,
 
   init: function () {
     document.addEventListener('click', MUI.onClick, false);
@@ -342,6 +349,49 @@ var MUI = {
     else if (a === 'tut-skip') { if (window.Tutorial) Tutorial.skipAll(); }
     else if (a === 'tut-restart') { if (window.Tutorial) Tutorial.restart(); }
     else if (a === 'privacy') { MUI.showPrivacy(); }
+    /* ---- 存档备份 ---- */
+    else if (a === 'bu-export') {
+      if (!window.Backup) return;
+      var bt = Backup.export();
+      if (!bt) { MUI.toast('⚠ 导出失败，请重试'); }
+      else if (Backup.copy(bt)) { MUI.toast('✅ 已复制到剪贴板，请粘贴到备忘录保存'); }
+      else { MUI.buExpTxt = bt; MUI.toast('请手动全选复制'); }
+      MUI.dirty = true;
+    }
+    else if (a === 'bu-export-show') {
+      if (!window.Backup) return;
+      MUI.buExpTxt = MUI.buExpTxt ? '' : Backup.export();
+      MUI.dirty = true;
+    }
+    else if (a === 'bu-import-open') { MUI.buImpOpen = !MUI.buImpOpen; MUI.buPending = null; MUI.buErr = ''; MUI.dirty = true; }
+    else if (a === 'bu-import-check') {
+      if (!window.Backup) return;
+      var br = Backup.parse(MUI.buImpTxt || '');
+      if (!br.ok) { MUI.buErr = br.msg; MUI.toast('⚠ ' + br.msg); MUI.dirty = true; return; }
+      var blv = 0;
+      SKILLS.forEach(function (bsk) {
+        if (bsk.id === 'combat') return;
+        blv += skillLevel((br.data.skills && br.data.skills[bsk.id]) || 0);
+      });
+      MUI.buPending = { data: br.data, t: br.t, nm: br.data.name, lv: blv };
+      MUI.buErr = '';
+      MUI.dirty = true;
+      MUI.toast('校验通过，确认后导入');
+    }
+    else if (a === 'bu-import-ok') {
+      if (MUI.buPending && MUI.buPending.data) Backup.apply(MUI.buPending.data);
+      MUI.buPending = null; MUI.buImpOpen = false; MUI.buImpTxt = ''; MUI.buErr = '';
+      MUI.dirty = true;
+    }
+    else if (a === 'bu-import-cancel') { MUI.buPending = null; MUI.dirty = true; }
+    else if (a === 'bu-snap') { if (window.Backup) Backup.snapshot('手动'); MUI.dirty = true; }
+    else if (a === 'bu-restore') { MUI.buRestoreAsk = parseInt(x, 10); MUI.dirty = true; }
+    else if (a === 'bu-restore-cancel') { MUI.buRestoreAsk = -1; MUI.dirty = true; }
+    else if (a === 'bu-restore-ok') {
+      if (window.Backup) Backup.restoreSnap(parseInt(x, 10));
+      MUI.buRestoreAsk = -1;
+      MUI.dirty = true;
+    }
     else if (a === 'lbcat') { MUI.lbCat = x; MUI.dirty = true; }
     else if (a === 'hero') { if (x && heroOf(x)) { MUI.heroId = x; sfxEvt('open'); MUI.renderHero(); } }
     else if (a === 'heroclose') { MUI.heroId = null; sfxEvt('close'); MUI.renderHero(); }
@@ -439,6 +489,7 @@ var MUI = {
     else if (s === 'bagq') { MUI.bankQ = parseInt(el.value, 10); if (isNaN(MUI.bankQ)) MUI.bankQ = -1; MUI.dirty = true; }
     else if (s === 'ah-item') { MUI.ahItem = el.value; MUI.dirty = true; }
     else if (s === 'ach-q') { MUI.achQ = el.value || ''; MUI.dirty = true; }
+    else if (s === 'bu-text') { MUI.buImpTxt = el.value || ''; MUI.dirty = true; }
     else if (s === 'sfx-vol') {
       if (window.SFX) { window.SFX.setVol(parseInt(el.value, 10) / 100); MUI.dirty = true; }
     }
@@ -850,6 +901,66 @@ var MUI = {
         '<div class="abt"><b>要点</b><span>纯离线单机，不联网、不收集、不上传个人信息</span></div>' +
         '<div style="margin-top:6px"><button class="mini gold" data-act="privacy">阅读完整政策</button></div>' +
         '</div>';
+    }
+
+    /* ---- 存档备份 / 迁移 ---- */
+    if (window.Backup) {
+      var kB = Math.max(1, Math.round(Backup.exportSize() / 1024));
+      h += '<div class="hd"><h3>💾 存档备份</h3></div><div class="card">';
+      h += '<div class="abt"><b>当前进度</b><span>' + MUI.esc(S.name || '') + ' ｜ 总等级 ' + totalLevel() +
+        ' ｜ ' + fmt(S.gold) + ' 金币（导出约 ' + kB + ' KB）</span></div>';
+
+      /* 导出 */
+      h += '<div class="abt"><b>导出</b><span>' +
+        '<button class="mini gold" data-act="bu-export">复制到剪贴板</button> ' +
+        '<button class="mini" data-act="bu-export-show">' + (MUI.buExpTxt ? '收起文本' : '显示为文本') + '</button>' +
+        '</span></div>';
+      if (MUI.buExpTxt) {
+        h += '<textarea class="bu-txt" readonly>' + MUI.esc(MUI.buExpTxt) + '</textarea>' +
+          '<div class="dim" style="font-size:10px">手动全选后复制，粘贴到备忘录或云端笔记保存。</div>';
+      }
+
+      /* 导入 */
+      h += '<div class="abt"><b>导入</b><span>' +
+        '<button class="mini" data-act="bu-import-open">' + (MUI.buImpOpen ? '收起' : '从文本导入') + '</button></span></div>';
+      if (MUI.buImpOpen) {
+        h += '<textarea class="bu-txt" data-sel="bu-text" placeholder="在此粘贴之前导出的存档文本…">' +
+          MUI.esc(MUI.buImpTxt || '') + '</textarea>' +
+          '<button class="mini gold" data-act="bu-import-check">校验并导入</button>';
+        if (MUI.buErr) h += '<div class="dim" style="font-size:10px;color:#f0645f">⚠ ' + MUI.esc(MUI.buErr) + '</div>';
+      }
+      /* 导入前必须预览确认 —— 覆盖是不可撤销操作 */
+      if (MUI.buPending) {
+        h += '<div class="card" style="border-color:#b98b2a;margin-top:6px">' +
+          '<div class="abt"><b>存档来自</b><span>' + MUI.esc(MUI.buPending.nm || '未命名') + ' ｜ 总等级 ' + MUI.buPending.lv + '</span></div>' +
+          '<div class="abt"><b>保存时间</b><span>' + Backup.fmtDays(MUI.buPending.t) + '</span></div>' +
+          '<div class="dim" style="font-size:10px;color:#f0645f">导入会覆盖当前进度；覆盖前会自动为当前进度保存一份快照。</div>' +
+          '<button class="mini gold" data-act="bu-import-ok">确认覆盖</button> ' +
+          '<button class="mini" data-act="bu-import-cancel">取消</button></div>';
+      }
+
+      /* 本机滚动快照 */
+      var snaps = Backup.listSnaps();
+      h += '<div class="abt"><b>本机快照</b><span>' +
+        '<button class="mini" data-act="bu-snap">立即备份一份</button></span></div>';
+      if (!snaps.length) {
+        h += '<div class="dim" style="font-size:10px">暂无快照。快照存在应用内部，卸载会一并清除。</div>';
+      } else {
+        for (var si = 0; si < snaps.length; si++) {
+          var sp = snaps[si];
+          h += '<div class="abt"><b>' + Backup.fmtDays(sp.t) + '</b><span>' +
+            MUI.esc(sp.nm || '') + ' 等级' + sp.lv + (sp.tag ? '（' + MUI.esc(sp.tag) + '）' : '') + '　' +
+            (MUI.buRestoreAsk === sp.i
+              ? '<button class="mini red" data-act="bu-restore-ok" data-a="' + sp.i + '">确认回滚</button>' +
+              '<button class="mini" data-act="bu-restore-cancel">取消</button>'
+              : '<button class="mini" data-act="bu-restore" data-a="' + sp.i + '">回滚到此</button>') +
+            '</span></div>';
+        }
+      }
+      h += '<div class="dim" style="font-size:10px;margin-top:4px">' +
+        '卸载或清除应用数据会删除全部进度，导出文本是唯一能跨设备迁移的方式；' +
+        '若开启了系统云备份，进度也可能随备份一并保存（见上方隐私政策第 4 条）。</div>';
+      h += '</div>';
     }
 
     /* ---- 新人引导 ---- */

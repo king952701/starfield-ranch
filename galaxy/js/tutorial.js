@@ -38,7 +38,8 @@
     {
       id: 'bag', goal: '打开「背包」看看产出', ic: '🎒', tab: 'bag',
       tip: '所有材料都堆在背包里，可以直接售出换金币，或留着做装备。',
-      check: function () { return curTab() === 'bag'; },
+      /* 手机 tab 叫 bag，桌面 tab 叫 bank，两端都得认 */
+      check: function () { const t = curTab(); return t === 'bag' || t === 'bank'; },
       rw: { bell: 2 }
     },
     {

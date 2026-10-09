@@ -424,6 +424,30 @@ Object.assign(UI, {
       }).join('') + '</div>';
     return h;
   },
+  /* ---------- 存档导入（弹层里的输入框不会被主循环重刷） ---------- */
+  showBackup: function () {
+    if (typeof Backup === 'undefined') return;
+    const w = document.getElementById('modalwrap');
+    if (!w) return;
+    w.innerHTML = '<div class="modal"><h2>💾 导入存档</h2>' +
+      '<p class="sub">粘贴之前导出的存档文本。导入会覆盖当前进度 —— 覆盖前会自动为当前进度保存一份快照。</p>' +
+      '<textarea id="buin" style="width:100%;height:150px;background:#080d1c;color:#b8c2e0;' +
+      'border:1px solid #232c50;border-radius:8px;padding:8px;font-size:11px;box-sizing:border-box;' +
+      'word-break:break-all" placeholder="在此粘贴存档文本…"></textarea>' +
+      '<div id="buerrmsg" style="color:#f0645f;font-size:12px;min-height:18px"></div>' +
+      '<button class="big" id="budo">校验并导入</button> ' +
+      '<button class="big" id="buclose">取消</button></div>';
+    w.style.display = 'flex';
+    document.getElementById('buclose').onclick = function () { w.style.display = 'none'; };
+    document.getElementById('budo').onclick = function () {
+      const r = Backup.parse(document.getElementById('buin').value || '');
+      if (!r.ok) { document.getElementById('buerrmsg').textContent = '⚠ ' + r.msg; return; }
+      Backup.apply(r.data);
+      w.style.display = 'none';
+      UI.dirty = true;
+    };
+  },
+
   /* ---------- 隐私政策全文 ---------- */
   showPrivacy: function () {
     if (typeof PRIVACY === 'undefined') return;

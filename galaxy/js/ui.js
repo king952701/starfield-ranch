@@ -56,6 +56,23 @@ const UI = {
       case 'guild-leave': S.guild = null; UI.dirty = true; break;
       case 'lbcat': UI.lbCat = x; UI.dirty = true; break;
     case 'privacy': UI.showPrivacy(); break;
+    case 'bu-export': {
+      const t = Backup.export();
+      if (!t) break;
+      if (Backup.copy(t)) { if (UI.toast) UI.toast('✅ 已复制到剪贴板'); }
+      else UI.buExpTxt = t;
+      UI.dirty = true;
+      break;
+    }
+    case 'bu-show': UI.buExpTxt = UI.buExpTxt ? '' : Backup.export(); UI.dirty = true; break;
+    case 'bu-import': UI.showBackup(); break;
+    case 'bu-snap': Backup.snapshot('手动'); UI.dirty = true; break;
+    case 'bu-restore': UI.buRestoreAsk = x; UI.dirty = true; break;
+    case 'bu-restore-cancel': UI.buRestoreAsk = -1; UI.dirty = true; break;
+    case 'bu-restore-ok': Backup.restoreSnap(+x); UI.buRestoreAsk = -1; UI.dirty = true; break;
+    case 'tut-restart': Tutorial.restart(); break;
+    case 'tut-skip': Tutorial.skipAll(); break;
+    case 'tut-goto': UI.tab = x; UI.dirty = true; break;
       case 'hero': if (x && heroOf(x)) { UI.heroId = x; UI.scrollTop && UI.scrollTop(); UI.dirty = true; } break;
       case 'heroclose': UI.heroId = null; UI.dirty = true; break;
       case 'wipe': if (confirm('确定清空存档并重新开始？')) { wipeSave(); location.reload(); } break;
@@ -301,6 +318,11 @@ const UI = {
 
   /* ---------- 面板 ---------- */
   panel: function () {
+    const body = UI.panelBody();
+    /* 顶部引导目标条：模块缺失时静默为空 */
+    try { return ((window.Tutorial ? Tutorial.bar() : '') + body); } catch (e) { return body; }
+  },
+  panelBody: function () {
     switch (UI.tab) {
       case 'skill': return UI.pSkill();
       case 'combat': return UI.pCombat();
@@ -357,6 +379,45 @@ const UI = {
         '以上素材均为 Creative Commons CC0 1.0（公有领域奉献），允许个人、教育与商业用途；' +
         '署名非强制，本项目主动列出以示尊重。完整许可原文见 media/THIRD-PARTY-LICENSES.txt。</div>';
       h += '</div>';
+    }
+    if (window.Tutorial) {
+      const tS = Tutorial.ready();
+      const stTxt = tS.skip ? '已跳过' : (tS.step >= Tutorial.steps.length ? '已全部完成' : ('进行中 ' + tS.step + '/' + Tutorial.steps.length));
+      h += '<h3 style="font-size:13px;color:var(--gold);margin:12px 0 6px">🎯 新人引导</h3>';
+      h += '<p style="font-size:12px">状态：' + stTxt + '　' +
+        '<button class="mini" data-act="tut-restart">重来一次</button> ' +
+        '<button class="mini" data-act="tut-skip">跳过</button></p>';
+    }
+    if (window.Backup) {
+      const nm = String(S.name || '').replace(/[<>&]/g, '');
+      const kB = Math.max(1, Math.round(Backup.exportSize() / 1024));
+      h += '<h3 style="font-size:13px;color:var(--gold);margin:12px 0 6px">💾 存档备份</h3>';
+      h += '<p style="font-size:12px;line-height:1.8">当前进度：' + nm + ' ｜ 总等级 <b style="color:var(--gold)">' +
+        totalLevel() + '</b> ｜ ' + fmt(S.gold) + ' 金币（导出约 ' + kB + ' KB）<br>' +
+        '<button class="mini" data-act="bu-export" style="margin-top:6px">复制到剪贴板</button> ' +
+        '<button class="mini" data-act="bu-show">' + (UI.buExpTxt ? '收起文本' : '显示为文本') + '</button> ' +
+        '<button class="mini" data-act="bu-import">从文本导入</button> ' +
+        '<button class="mini" data-act="bu-snap">立即备份一份</button></p>';
+      if (UI.buExpTxt) {
+        h += '<textarea readonly style="width:100%;height:120px;background:#080d1c;color:#b8c2e0;' +
+          'border:1px solid #232c50;border-radius:8px;padding:8px;font-size:11px;box-sizing:border-box;' +
+          'word-break:break-all">' + String(UI.buExpTxt).replace(/</g, '&lt;') + '</textarea>';
+      }
+      const snaps = Backup.listSnaps();
+      h += '<p style="font-size:12px;line-height:1.8;margin-top:6px">本机快照：' +
+        (snaps.length ? '' : '暂无（快照保存在应用内，卸载会一并清除）') + '</p>';
+      snaps.forEach(function (sp) {
+        const nm2 = String(sp.nm || '').replace(/[<>&]/g, '');
+        h += '<p style="font-size:12px">' + Backup.fmtDays(sp.t) + ' ｜ ' + nm2 + ' 等级' + sp.lv +
+          (sp.tag ? '（' + sp.tag + '）' : '') + '　' +
+          (UI.buRestoreAsk === sp.i
+            ? '<button class="mini" data-act="bu-restore-ok" data-a="' + sp.i + '">确认回滚</button>' +
+            '<button class="mini" data-act="bu-restore-cancel">取消</button>'
+            : '<button class="mini" data-act="bu-restore" data-a="' + sp.i + '">回滚到此</button>') +
+          '</p>';
+      });
+      h += '<p style="font-size:11px;color:var(--dim)">卸载或清除应用数据会删除全部进度，' +
+        '导出文本是唯一可跨设备迁移的方式；若开启了系统云备份，进度也可能随备份保存（见隐私政策第 4 条）。</p>';
     }
     if (typeof PRIVACY !== 'undefined') {
       h += '<h3 style="font-size:13px;color:var(--gold);margin:12px 0 6px">🔒 隐私政策</h3>';

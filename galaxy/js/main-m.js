@@ -20,6 +20,8 @@ var MGame = {
     MUI.init();
     var loaded = loadGame();
     if (!loaded) { MGame.showStart(); return; }
+    /* 每日首次启动留一份本机快照，同一天不重复 */
+    if (window.Backup) Backup.dailySnapshot();
 
     /* 首次进入：按存档时间补算离线收益 */
     var elapsed = (Date.now() - (S.savedAt || Date.now())) / 1000;

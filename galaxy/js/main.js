@@ -20,6 +20,7 @@ const Game = {
     /* 离线结算 */
     const elapsed = (Date.now() - (S.savedAt || Date.now())) / 1000;
     const res = runOffline(elapsed);
+    if (window.Backup) Backup.dailySnapshot();
     Game.startLoop();
     if (res && res.sec > 60) Game.showOffline(res);
   },
@@ -126,6 +127,7 @@ const Game = {
     if (Game.slowT >= 1) {
       Game.slowT = 0;
       tickTasks();
+      if (window.Tutorial) Tutorial.check();   /* 首启引导：每秒检查目标是否达成 */
       refreshMarket(false);
       Game.chatT++;
       if (Game.chatT >= 12) {
