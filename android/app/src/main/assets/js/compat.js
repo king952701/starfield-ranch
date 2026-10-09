@@ -1,5 +1,5 @@
 /* ============================================================
- *  兼容层 · 面向 UC浏览器 / QQ浏览器(X5) / 联想浏览器 等移动端内核
+ *  兼容层 · 面向老旧移动端内核（X5 / U3 / U4 / 低版本 WebView）
  *  - ES5+ 方法兜底（findIndex / includes / Object.assign / closest / rAF）
  *  - localStorage 兜底（无痕模式、file:// 协议）
  *  - 视口高度修正（地址栏 / 虚拟按键 / 刘海屏安全区）
@@ -189,16 +189,23 @@
     e.preventDefault();
   });
 
-  /* ---------- 7. UA 探测 ---------- */
+  /* ---------- 8. 特性探测：多背景（用于渐进增强的 Kenney CC0 按钮纹理） ---------- */
+  try {
+    var probe = document.createElement('div').style;
+    probe.backgroundImage = 'url(#), -webkit-linear-gradient(#fff,#000)';
+    if (probe.backgroundImage.indexOf(',') > 0) {
+      document.documentElement.className += ' multibg';
+    }
+  } catch (e8) { }
   var ua = (navigator.userAgent || '').toLowerCase();
-  var browser = '其他';
-  if (ua.indexOf('ucbrowser') >= 0 || ua.indexOf('ubrowser') >= 0) browser = 'UC浏览器';
-  else if (ua.indexOf('qqbrowser') >= 0 || ua.indexOf('mqqbrowser') >= 0) browser = 'QQ浏览器';
-  else if (ua.indexOf('lenovo') >= 0 || ua.indexOf('lephone') >= 0 || ua.indexOf('zui') >= 0) browser = '联想浏览器';
-  else if (ua.indexOf('baidubrowser') >= 0 || ua.indexOf('baiduboxapp') >= 0) browser = '百度浏览器';
-  else if (ua.indexOf('quark') >= 0) browser = '夸克浏览器';
-  else if (ua.indexOf('micromessenger') >= 0) browser = '微信内置';
-  else if (ua.indexOf('chrome') >= 0) browser = 'Chrome';
+  var browser = '系统浏览器';
+  if (ua.indexOf('micromessenger') >= 0) browser = '社交应用内置';
+  else if (ua.indexOf('ucbrowser') >= 0 || ua.indexOf('ubrowser') >= 0) browser = '第三方内核浏览器';
+  else if (ua.indexOf('qqbrowser') >= 0 || ua.indexOf('mqqbrowser') >= 0) browser = '第三方内核浏览器';
+  else if (ua.indexOf('lenovo') >= 0 || ua.indexOf('lephone') >= 0 || ua.indexOf('zui') >= 0) browser = '厂商内置浏览器';
+  else if (ua.indexOf('baidubrowser') >= 0 || ua.indexOf('baiduboxapp') >= 0) browser = '第三方内核浏览器';
+  else if (ua.indexOf('quark') >= 0) browser = '第三方内核浏览器';
+  else if (ua.indexOf('chrome') >= 0) browser = 'Chromium 内核浏览器';
 
   var webkitVer = 0;
   var m = /applewebkit\/(\d+)/.exec(ua) || /chrome\/(\d+)/.exec(ua);

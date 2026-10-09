@@ -255,7 +255,7 @@ Object.assign(UI, {
 
   /* ---------------- 专精面板 ---------------- */
   pMastery: function () {
-    let h = '<div class="ph"><div class="phic">✦</div><div class="phtxt"><h2>专精（Mastery）</h2><p>灵感来自 Melvor Idle：每个动作都有独立专精等级；25% 专精经验注入专精池，达到 10/25/50/95% 检查点可获得强力加成。</p></div></div>';
+    let h = '<div class="ph"><div class="phic">✦</div><div class="phtxt"><h2>专精</h2><p>每个动作都有独立专精等级；25% 专精经验注入专精池，达到 10/25/50/95% 检查点可获得强力加成。</p></div></div>';
     SKILLS.forEach(function (s) {
       if (s.id === 'combat') return;
       const cap = poolCap(s.id);
@@ -387,14 +387,36 @@ Object.assign(UI, {
       });
       h += '</div>';
     }
-    /* 排行榜 */
-    const me = totalLevel();
-    const lb = UI.leaderboard(me);
-    h += '<h3 class="sec">总等级排行榜</h3><div class="lb">';
-    lb.forEach(function (r, i) {
-      h += '<div class="lbr' + (r.me ? ' me' : '') + '"><span class="rk">' + (i + 1) + '</span><span class="rn">' + r.name + '</span><span class="rl">' + r.lv + '</span></div>';
+    /* ---- 专属类别动态排行榜 ---- */
+    if (!UI.lbCat) UI.lbCat = 'total';
+    h += '<h3 class="sec">排行榜</h3><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">';
+    LB_CATS.forEach(function (c) {
+      const on = UI.lbCat === c.id;
+      h += '<span data-act="lbcat" data-a="' + c.id + '" style="cursor:pointer;padding:3px 10px;border:1px solid ' +
+        (on ? 'var(--gold)' : '#2b3358') + ';border-radius:12px;font-size:12px;color:' +
+        (on ? 'var(--gold)' : 'var(--dim)') + '">' + c.ic + ' ' + c.nm + '</span>';
     });
     h += '</div>';
+
+    const cd = lbCat(UI.lbCat);
+    const rows = lbRanking(UI.lbCat);
+    let myRank = 0, myRow = null;
+    rows.forEach(function (r) { if (r.me) { myRank = r.rank; myRow = r; } });
+    h += '<div style="font-size:12px;color:var(--dim);margin-bottom:6px">' + cd.desc +
+      ' ｜ 你第 <b style="color:var(--gold)">' + myRank + '</b> / ' + rows.length +
+      ' 名，成绩 <b style="color:var(--gold)">' + fmt(myRow ? myRow.val : 0) + (cd.un ? ' ' + cd.un : '') + '</b></div>';
+    h += '<div class="lb">';
+    rows.forEach(function (r) {
+      const medal = r.rank === 1 ? '🥇' : (r.rank === 2 ? '🥈' : (r.rank === 3 ? '🥉' : r.rank));
+      h += '<div class="lbr' + (r.me ? ' me' : '') + '" data-act="hero" data-a="' + r.id + '" style="cursor:pointer">' +
+        '<span class="rk">' + medal + '</span><span class="rn">' + r.name +
+        '<em style="font-style:normal;color:var(--dim);font-size:10px"> ' + (r.title || '') + '</em></span>' +
+        '<span class="rl">' + fmt(r.val) + (cd.un ? ' ' + cd.un : '') + '</span>' +
+        '<span style="color:var(--dim)">›</span></div>';
+    });
+    h += '</div>';
+    h += '<div style="font-size:11px;color:var(--dim);margin-top:4px">点击任意一行可查看对方的装备、工具与全部技能等级。</div>';
+    if (UI.heroId) h += UI.heroBlock(UI.heroId);
     /* 世界频道 */
     h += '<h3 class="sec">世界频道</h3><div class="chat">' +
       (S.chat || []).slice(0, 12).map(function (m) {
@@ -402,6 +424,142 @@ Object.assign(UI, {
       }).join('') + '</div>';
     return h;
   },
+  /* ---------- 存档导入（弹层里的输入框不会被主循环重刷） ---------- */
+  showBackup: function () {
+    if (typeof Backup === 'undefined') return;
+    const w = document.getElementById('modalwrap');
+    if (!w) return;
+    w.innerHTML = '<div class="modal"><h2>💾 导入存档</h2>' +
+      '<p class="sub">粘贴之前导出的存档文本。导入会覆盖当前进度 —— 覆盖前会自动为当前进度保存一份快照。</p>' +
+      '<textarea id="buin" style="width:100%;height:150px;background:#080d1c;color:#b8c2e0;' +
+      'border:1px solid #232c50;border-radius:8px;padding:8px;font-size:11px;box-sizing:border-box;' +
+      'word-break:break-all" placeholder="在此粘贴存档文本…"></textarea>' +
+      '<div id="buerrmsg" style="color:#f0645f;font-size:12px;min-height:18px"></div>' +
+      '<button class="big" id="budo">校验并导入</button> ' +
+      '<button class="big" id="buclose">取消</button></div>';
+    w.style.display = 'flex';
+    document.getElementById('buclose').onclick = function () { w.style.display = 'none'; };
+    document.getElementById('budo').onclick = function () {
+      const r = Backup.parse(document.getElementById('buin').value || '');
+      if (!r.ok) { document.getElementById('buerrmsg').textContent = '⚠ ' + r.msg; return; }
+      Backup.apply(r.data);
+      w.style.display = 'none';
+      UI.dirty = true;
+    };
+  },
+
+  /* ---------- 隐私政策全文 ---------- */
+  showPrivacy: function () {
+    if (typeof PRIVACY === 'undefined') return;
+    const w = document.getElementById('modalwrap');
+    if (!w) return;
+    let h = '<div class="modal"><h2>🔒 隐私政策</h2>' +
+      '<p class="sub">版本 v' + PRIVACY.ver + ' ｜ 更新于 ' + PRIVACY.updated + '</p>';
+    PRIVACY.secs.forEach(function (s) {
+      h += '<h3 style="font-size:13px;color:var(--gold);margin:12px 0 4px">' + s.h + '</h3>';
+      s.p.forEach(function (t) {
+        h += '<p style="font-size:12px;line-height:1.8;margin:3px 0">' + t + '</p>';
+      });
+    });
+    h += '<button class="big" id="btnpol">我已阅读</button></div>';
+    w.innerHTML = h;
+    w.style.display = 'flex';
+    const b = document.getElementById('btnpol');
+    if (b) b.onclick = function () { w.style.display = 'none'; };
+  },
+
+  /* ---------- 天赋树 ---------- */
+  pTalent: function () {
+    if (!window.Talents) return '<div class="card"><p>天赋模块未加载</p></div>';
+    const B = '<div class="card"><p style="font-size:12px;line-height:1.8">' +
+      '<b>星海天赋树</b>——每层三选一，点数有限，你的取舍就是你的流派。<br>' +
+      '点数来源：开局 1 点，之后总等级每 8 级 +1 点、每 40 级再 +1 点。</p></div>';
+    return B + Talents.html();
+  },
+
+  /* ---------- 玩家档案（内联展开） ---------- */
+  heroBlock: function (id) {
+    const d = heroOf(id);
+    if (!d) return '';
+    const me = heroOf('me');
+    const esc = function (s) {
+      return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    };
+    let maxSk = 10;
+    SKILLS.forEach(function (s) {
+      if (s.id === 'combat') return;
+      maxSk = Math.max(maxSk, (d.skills[s.id] || 0), (me && me.skills ? (me.skills[s.id] || 0) : 0));
+    });
+
+    let h = '<h3 class="sec">' + (d.me ? '🐄' : '👤') + ' ' + esc(d.name) + ' 的档案' +
+      '<button class="mini" data-act="heroclose" style="float:right">收起</button></h3>';
+    h += '<div style="font-size:12px;color:var(--dim);margin-bottom:8px">' + esc(d.title || '') +
+      ' ｜ 公会：' + esc(d.guild || '未加入公会') + '</div>';
+
+    /* 关键数值 */
+    h += '<div style="display:flex;gap:14px;font-size:12px;margin-bottom:10px">' +
+      '<span>总等级 <b style="color:var(--gold)">' + fmt(d.lvTotal) + '</b></span>' +
+      '<span>战斗 <b style="color:var(--gold)">' + (Math.round(d.combatLv * 10) / 10) + '</b></span>' +
+      '<span>金币 <b style="color:var(--gold)">' + fmt(d.gold) + '</b></span></div>';
+
+    /* 装备 */
+    h += '<div style="font-size:12px;color:var(--gold);margin:8px 0 4px">🛡️ 装备</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
+    SLOTS.forEach(function (sl) {
+      const it = d.equip[sl.id] ? ITEMS[d.equip[sl.id]] : null;
+      const e = d.enh[sl.id] || 0;
+      h += '<div style="width:88px;padding:5px;text-align:center;background:#0e1428;border:1px solid #232c50;border-radius:8px' +
+        (it ? '' : ';opacity:.45') + '">' +
+        '<div style="font-size:18px">' + (it ? it.icon : sl.ic) + (e ? '<span style="font-size:9px;color:var(--gold)">+' + e + '</span>' : '') + '</div>' +
+        '<div style="font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (it ? it.name : sl.name) + '</div>' +
+        '<div style="font-size:9px;color:var(--dim)">' + (it ? UI.statText(it) : '空') + '</div></div>';
+    });
+    h += '</div>';
+
+    /* 工具 */
+    const tool = d.equip.tool ? ITEMS[d.equip.tool] : null;
+    h += '<div style="font-size:12px;color:var(--gold);margin:10px 0 4px">🛠️ 工具</div>' +
+      '<div style="font-size:12px">' + (tool
+        ? (tool.icon + ' <b>' + tool.name + '</b>' + (d.enh.tool ? ' +' + d.enh.tool : '') +
+          (tool.toolSkill && SKILL_MAP[tool.toolSkill] ? '<span style="color:var(--dim)"> ｜ ' + SKILL_MAP[tool.toolSkill].name + ' 效率 +' + (tool.eff || 0) + '%' +
+            (tool.tier != null ? '（第 ' + (tool.tier + 1) + '/7 档）' : '') + '</span>' : ''))
+        : '<span style="color:var(--dim)">暂未装备工具</span>') + '</div>';
+
+    /* 技能 */
+    h += '<div style="font-size:12px;color:var(--gold);margin:10px 0 4px">📈 全部技能等级</div>';
+    SKILLS.forEach(function (s) {
+      if (s.id === 'combat') return;
+      const lv = d.skills[s.id] || 0;
+      const mine = (me && me.skills) ? (me.skills[s.id] || 0) : 0;
+      const diff = lv - mine;
+      const col = diff > 0 ? '#f26d6d' : (diff < 0 ? '#6ddc9c' : 'var(--dim)');
+      h += '<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:2px 0">' +
+        '<span style="width:76px">' + s.icon + ' ' + s.name + '</span>' +
+        '<span style="flex:1;height:6px;background:#080d1c;border:1px solid #232c50;border-radius:3px;overflow:hidden">' +
+        '<i style="display:block;height:100%;width:' + Math.min(100, lv / maxSk * 100).toFixed(1) + '%;background:linear-gradient(90deg,#8a6b1f,#f2c14e)"></i></span>' +
+        '<b style="width:30px;text-align:right;color:var(--gold)">' + lv + '</b>' +
+        (d.me ? '' : '<em style="font-style:normal;width:44px;text-align:right;font-size:11px;color:' + col + '">' +
+          (diff > 0 ? '+' + diff : (diff < 0 ? diff : '持平')) + '</em>') +
+        '</div>';
+    });
+
+    /* 战斗素养 */
+    if (d.subs) {
+      const SUB7 = ['stamina', 'intelligence', 'attack', 'defense', 'melee', 'ranged', 'magic'];
+      const NM = { stamina: '体力', intelligence: '智力', attack: '攻击', defense: '防御', melee: '近战', ranged: '远程', magic: '魔法' };
+      h += '<div style="font-size:12px;color:var(--gold);margin:10px 0 4px">⚔️ 战斗素养</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
+      SUB7.forEach(function (k) {
+        const v = d.subs[k] || 0, mv = (me && me.subs) ? (me.subs[k] || 0) : 0, df = v - mv;
+        h += '<div style="width:88px;text-align:center;padding:4px;background:#0e1428;border:1px solid #232c50;border-radius:8px">' +
+          '<div style="font-size:10px;color:var(--dim)">' + NM[k] + '</div>' +
+          '<b>' + v + '</b>' +
+          (d.me ? '' : '<div style="font-size:10px;color:' + (df > 0 ? '#f26d6d' : (df < 0 ? '#6ddc9c' : 'var(--dim)')) + '">' +
+            (df > 0 ? '+' + df : (df < 0 ? df : '持平')) + '</div>') + '</div>';
+      });
+      h += '</div>';
+    }
+    return h;
+  },
+
   leaderboard: function (me) {
     const arr = [];
     for (let i = 0; i < 14; i++) {

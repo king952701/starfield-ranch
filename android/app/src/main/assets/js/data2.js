@@ -11,7 +11,7 @@ const ABILITIES = [
   { id: 'rain', name: '箭雨', icon: '🌧️', style: 'ranged', mp: 18, cd: 9, mult: 1.6, targets: 'all', lvl: 10, desc: '对全体敌人造成 160% 伤害' },
   { id: 'precision', name: '精准', icon: '🎯', style: 'ranged', mp: 16, cd: 25, buff: { acc: 0.35, dur: 12 }, targets: 0, lvl: 25, desc: '12 秒内命中 +35%' },
   { id: 'fireball', name: '火球', icon: '🔥', style: 'magic', mp: 12, cd: 5, mult: 2.0, targets: 1, lvl: 1, desc: '对单体造成 200% 火焰伤害' },
-  { id: 'icespear', name: '冰矛', icon: '❄️', style: 'magic', mp: 14, cd: 6, mult: 1.85, targets: 1, lvl: 8, desc: '对单体造成 185% 流水伤害' },
+  { id: 'icespear', name: '冰矛', icon: '❄️', style: 'magic', mp: 14, cd: 6, mult: 1.85, targets: 1, lvl: 8, desc: '对单体造成 185% 冰霜伤害' },
   { id: 'storm', name: '星暴', icon: '🌠', style: 'magic', mp: 24, cd: 12, mult: 1.7, targets: 'all', lvl: 30, desc: '对全体敌人造成 170% 伤害' },
   { id: 'toughness', name: '坚韧', icon: '🛡️', style: 'any', mp: 15, cd: 35, buff: { armor: 0.5, dur: 15 }, targets: 0, lvl: 15, desc: '15 秒内护甲 +50%' },
   { id: 'meditate', name: '冥想', icon: '🧘', style: 'any', mp: 0, cd: 40, buff: { regen: 3, dur: 10 }, targets: 0, lvl: 12, desc: '10 秒内每秒回复 3% 内力' }
@@ -86,13 +86,13 @@ const TASK_DIFF = [
 
 /* ---------- 代币商店 ---------- */
 const TOKEN_SHOP = [
-  { id: 't_cd1', name: '任务冷却 -1 小时', cost: 100, max: 1, desc: '任务生成间隔 8h → 7h' },
-  { id: 't_cd2', name: '任务冷却 -1 小时', cost: 200, max: 1, desc: '任务生成间隔 7h → 6h', need: 't_cd1' },
-  { id: 't_cd3', name: '任务冷却 -1 小时', cost: 400, max: 1, desc: '任务生成间隔 6h → 5h', need: 't_cd2' },
-  { id: 't_cd4', name: '任务冷却 -1 小时', cost: 800, max: 1, desc: '任务生成间隔 5h → 4h', need: 't_cd3' },
+  { id: 't_cd1', name: '任务冷却 -1 小时 Ⅰ', cost: 100, max: 1, desc: '任务生成间隔 8h → 7h' },
+  { id: 't_cd2', name: '任务冷却 -1 小时 Ⅱ', cost: 200, max: 1, desc: '任务生成间隔 7h → 6h', need: 't_cd1' },
+  { id: 't_cd3', name: '任务冷却 -1 小时 Ⅲ', cost: 400, max: 1, desc: '任务生成间隔 6h → 5h', need: 't_cd2' },
+  { id: 't_cd4', name: '任务冷却 -1 小时 Ⅳ', cost: 800, max: 1, desc: '任务生成间隔 5h → 4h', need: 't_cd3' },
   { id: 't_slot', name: '+1 任务栏位', cost: 250, max: 6, desc: '任务板上限 +1（基础 6）' },
-  { id: 't_off1', name: '离线时长 +6 小时', cost: 300, max: 1, desc: '离线结算上限 24h → 30h' },
-  { id: 't_off2', name: '离线时长 +6 小时', cost: 700, max: 1, desc: '离线结算上限 30h → 36h', need: 't_off1' },
+  { id: 't_off1', name: '离线时长 +6 小时 Ⅰ', cost: 300, max: 1, desc: '离线结算上限 24h → 30h' },
+  { id: 't_off2', name: '离线时长 +6 小时 Ⅱ', cost: 700, max: 1, desc: '离线结算上限 30h → 36h', need: 't_off1' },
   { id: 't_rate', name: '任务奖励 +25%', cost: 500, max: 4, desc: '任务金币与代币奖励 +25%' },
   { id: 't_dmg', name: '任务徽章 · 伤害', cost: 600, max: 5, desc: '全局伤害 +4%' },
   { id: 't_spd', name: '任务徽章 · 速度', cost: 600, max: 5, desc: '全局动作速度 +4%' }
@@ -100,7 +100,7 @@ const TOKEN_SHOP = [
 
 /* ---------- 牛铃商店 ---------- */
 const BELL_SHOP = [
-  { id: 'b_bell5', name: '牛铃 ×5', cost: 0, kind: 'pack', desc: '（示例：充值入口）', disabled: true },
+  { id: 'b_dlv', name: '牛铃补给箱 ×5', cost: 0, kind: 'pack', desc: '暂未开放，敬请期待', disabled: true },
   { id: 'b_offline', name: '离线时长 +12 小时', cost: 3, max: 2, desc: '离线结算上限 +12 小时' },
   { id: 'b_xp', name: '全局经验 +10%', cost: 5, max: 5, desc: '所有技能经验 +10%' },
   { id: 'b_rare', name: '稀有发现 +5%', cost: 4, max: 5, desc: '所有稀有掉落几率 +5%' },
@@ -127,5 +127,96 @@ const CHAT_LINES = [
   '强化 +10 成功了！感谢附魔手套'
 ];
 
+/* ============================================================
+ *  第三方素材署名表
+ *  全部来自 Kenney（www.kenney.nl），Creative Commons CC0 1.0。
+ *  CC0 不强制署名，但项目主动列出来源以示尊重。
+ *  若日后加入 CC BY 素材，必须在 author 后注明原名并保留 lic/url。
+ * ============================================================ */
+const CREDITS = [
+  {
+    pkg: 'UI Pack (2.0)', use: '按钮底图、进度条槽、勾选/叉/星标图标',
+    author: 'Kenney Vleugels（Kenney.nl）', lic: 'CC0 1.0',
+    url: 'https://kenney.nl/assets/ui-pack'
+  },
+  {
+    pkg: 'Interface Sounds (1.0)', use: '界面点击、切页、确认、错误提示音',
+    author: 'Kenney（Kenney.nl）', lic: 'CC0 1.0',
+    url: 'https://kenney.nl/assets/interface-sounds'
+  },
+  {
+    pkg: 'Impact Sounds (1.0)', use: '采集、制造、出售、战斗命中、升级铃',
+    author: 'Kenney（Kenney.nl）', lic: 'CC0 1.0',
+    url: 'https://kenney.nl/assets/impact-sounds'
+  },
+  {
+    pkg: 'Sci-Fi Sounds (1.0)', use: '面板开启/关闭、护盾、科幻氛围音',
+    author: 'Kenney（Kenney.nl）', lic: 'CC0 1.0',
+    url: 'https://kenney.nl/assets/sci-fi-sounds'
+  },
+  {
+    pkg: 'Music Jingles', use: '技能升级与成就达成的旋律',
+    author: 'Kenney Vleugels（Kenney.nl）', lic: 'CC0 1.0',
+    url: 'https://kenney.nl/assets/music-jingles'
+  }
+];
+
+/* ============================================================
+ *  隐私政策正文
+ *  两端（手机 / 桌面）共用同一份数据，避免文案漂移。
+ *  每一条都必须与应用的真实行为严格对应，不可套模板。
+ * ============================================================ */
+const PRIVACY = {
+  ver: '1.0',
+  updated: '2026-10-09',
+  secs: [
+    {
+      h: '📌 一句话总结',
+      p: ['《星海牧场》是一款纯离线单机游戏：不联网、不收集、不上传你的任何个人信息。']
+    },
+    {
+      h: '1. 我们收集哪些信息',
+      p: ['我们不收集任何信息。应用内没有账号注册，没有登录，也不需要填写手机号、邮箱等任何资料。',
+        '游戏过程中产生的全部数据（技能等级、物品、金币、装备、角色昵称等）都只保存在你自己的设备上。']
+    },
+    {
+      h: '2. 会不会联网传输数据',
+      p: ['不会。应用不具备网络访问权限，游戏本体与全部美术、音效资源均打包在安装文件内部，运行时不向任何服务器发起请求。',
+        '离线结算、排行榜与同服对手均由本地算法即时推算，不涉及与其他玩家的数据交换。']
+    },
+    {
+      h: '3. 存档存在哪里',
+      p: ['游戏进度保存在本应用的应用私有数据区（浏览器本地存储）中，其他应用无法读取。',
+        '卸载应用或清除应用数据时，进度会一并删除，且无法通过我们找回 —— 请在重装前留意是否需要自行备份。']
+    },
+    {
+      h: '4. 什么情况下数据会离开设备',
+      p: ['唯一可能的情况：你的安卓系统开启了云备份（例如 Google 备份或手机厂商提供的云服务）。此时本应用的私有数据可能被包含进系统备份并上传到你本人的云账户。',
+        '这一行为由系统备份机制完成，我们无法读取、也无法控制其中的内容。若你希望游戏进度完全不离开本机，请在设备的系统设置中关闭应用数据备份。']
+    },
+    {
+      h: '5. 第三方服务',
+      p: ['本应用未集成广告 SDK、统计分析 SDK、崩溃上报、支付渠道或任何社交分享组件。',
+        '应用内置的音效与界面贴图来自 Kenney（CC0 1.0 公共领域贡献），字体符号部分使用 Noto Emoji；这些素材以文件形式内置于安装包中，运行时不会向素材作者或任何第三方发送数据。相关授权与署名可在游戏内「关于」页查看。']
+    },
+    {
+      h: '6. 权限说明',
+      p: ['本应用未申请任何安卓系统权限：不读取通讯录、位置、相册、通讯状态和通话记录，也不尝试获取设备标识符。']
+    },
+    {
+      h: '7. 儿童隐私',
+      p: ['本游戏不含任何针对儿童定向收集行为，也没有年龄限制内容，不限定使用年龄段。由于我们本来就不收集任何数据，因此不存在儿童个人信息的采集、使用或披露问题。']
+    },
+    {
+      h: '8. 政策更新',
+      p: ['若未来版本的收集或传输行为发生变化，我们会先更新本页内容，并在版本号旁标注更新日期。继续使用即视为知悉更新后的条款。']
+    },
+    {
+      h: '9. 联系我们',
+      p: ['如对本政策有疑问，可通过本应用在应用商店页面上的开发者联系方式与我们取得联系。']
+    }
+  ]
+};
+
 /* ---------- 排行榜 NPC ---------- */
-const NPC_NAMES = ['奶牛大魔王', '星尘小笼包', '奶酪超人', '银河摆渡人', '沐莓奶茶', '奥术老张', '彩虹牛牛', '虚空摸鱼王', '超新星咸鱼', '挤奶工小李', '苔藓史莱姆', '牛铃收藏家', '铁斧阿强', '钓鱼佬老王', '星海第一奶'];
+const NPC_NAMES = ['奶牛大魔王', '星尘小笼包', '奶酪游侠', '银河摆渡人', '沐莓奶茶', '奥术老张', '彩虹牛牛', '虚空摸鱼王', '超新星咸鱼', '挤奶工小李', '苔藓史莱姆', '牛铃收藏家', '铁斧阿强', '钓鱼佬老王', '星海第一牧'];

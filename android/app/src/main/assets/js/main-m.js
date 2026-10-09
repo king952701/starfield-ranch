@@ -20,6 +20,13 @@ var MGame = {
     MUI.init();
     var loaded = loadGame();
     if (!loaded) { MGame.showStart(); return; }
+    /* 每日首次启动留一份本机快照，同一天不重复 */
+    if (window.Backup) Backup.dailySnapshot();
+    /* 新开的「天赋」页需要被看见：有点数没花时提醒一次 */
+    if (window.Talents && !S.flags.talentHint && Talents.availPoints() > 0) {
+      S.flags.talentHint = 1;
+      pushLog('🌳 天赋树已开放：在「天赋」页点亮你的第一个节点');
+    }
 
     /* 首次进入：按存档时间补算离线收益 */
     var elapsed = (Date.now() - (S.savedAt || Date.now())) / 1000;
@@ -40,7 +47,7 @@ var MGame = {
       '<div class="fr"><label>服务器</label><select id="pserver">' +
       ['星海一区', '星海二区', '银河新区', '沐莓小镇'].map(function (s) { return '<option>' + s + '</option>'; }).join('') +
       '</select></div>' +
-      '<div class="tips">底部选「技能」→ 点动作右侧 +1 / +10 / ∞ 加入队列。<br>' +
+      '<div class="tips">左侧选「技能」→ 用 +1 / +10 / ∞ 排活，或用「置顶队列」「加入队列 #N」安排顺序。<br>' +
       '「战斗」可挂机刷材料装备；「专精」注入池经验获得强力加成。<br>' +
       '关掉页面也会继续生产，回来自动结算离线收益。</div>' + warn +
       '<button class="big" id="btnstart">进入星海</button></div>';
@@ -59,15 +66,61 @@ var MGame = {
   /* ---------------- 离线结算 ---------------- */
   showOffline: function (res) {
     var w = document.getElementById('mmodal');
-    w.innerHTML = '<div class="mbox">' +
+    var h = '<div class="mbox">' +
       '<h2>🌙 离线结算</h2>' +
       '<div class="sub">你离开了 ' + fmtTime(res.sec) + '（上限 ' + bonuses().offline + ' 小时）</div>' +
       '<div class="og">' +
       '<div><s>完成动作</s><b>' + fmt(res.acts) + '</b></div>' +
       '<div><s>获得金币</s><b>' + fmt(res.gold) + '</b></div>' +
-      '<div><s>战斗</s><b>' + (res.kills ? '继续' : '未开启') + '</b></div>' +
-      '</div>' +
-      '<button class="big" id="btnok">继续冒险</button></div>';
+      '<div><s>战斗</s><b>' + (res.combat ? (fmt(res.kills) + ' 只') : '未开启') + '</b></div>' +
+      '</div>';
+
+    /* 这段时间攒下的物资 */
+    if (res.items && res.items.length) {
+      h += '<div class="off-h">🧺 获得的物资' +
+        (res.itemKinds > res.items.length ? '<em>共 ' + res.itemKinds + ' 种，显示价值最高的 ' + res.items.length + ' 件</em>' : '') +
+        '</div><div class="offitems">';
+      for (var i = 0; i < res.items.length; i++) {
+        var it = res.items[i];
+        h += '<div class="offitem"><span class="oi">' + it.icon + '</span>' +
+          '<b>' + it.name + '</b><em>×' + fmt(it.n) + '</em></div>';
+      }
+      h += '</div>';
+    } else {
+      h += '<div class="off-h dim">🧺 离线期间没有产出物资</div>';
+    }
+
+    /* 升级最有成就感，优先展示 */
+    if (res.lvups && res.lvups.length) {
+      h += '<div class="off-h">⬆️ 技能升级</div><div class="offlv">';
+      for (var j = 0; j < res.lvups.length; j++) {
+        var L = res.lvups[j];
+        var sk = SKILL_MAP[L.id];
+        h += '<div class="olv"><span>' + (sk ? sk.icon : '') + ' ' + (sk ? sk.name : L.id) + '</span>' +
+          '<s>' + L.from + '</s><i>→</i><b>' + L.to + '</b></div>';
+      }
+      h += '</div>';
+    } else {
+      /* 没升级就展示经验大头，仍然有正反馈 */
+      var top = [];
+      for (var k in (res.xp || {})) top.push({ id: k, v: res.xp[k] });
+      top.sort(function (a, b) { return b.v - a.v; });
+      if (top.length) {
+        h += '<div class="off-h">📈 累计经验</div><div class="offlv">';
+        for (var m = 0; m < Math.min(3, top.length); m++) {
+          var s2 = SKILL_MAP[top[m].id];
+          h += '<div class="olv"><span>' + (s2 ? s2.icon + ' ' + s2.name : top[m].id) + '</span>' +
+            '<b>+' + fmt(top[m].v) + '</b></div>';
+        }
+        h += '</div>';
+      }
+    }
+
+    if (res.deaths > 0) {
+      h += '<div class="off-h dim">💀 战死 ' + fmt(res.deaths) + ' 次（装备耐久需要留意）</div>';
+    }
+    h += '<button class="big" id="btnok">继续冒险</button></div>';
+    w.innerHTML = h;
     w.style.display = '-webkit-box';
     w.style.display = 'flex';
     document.getElementById('btnok').onclick = function () { w.style.display = 'none'; };
@@ -110,7 +163,9 @@ var MGame = {
     if (MGame.slowT >= 1) {
       MGame.slowT = 0;
       tickTasks();
+      if (window.Tutorial) Tutorial.check();   /* 首启引导：每秒检查目标是否达成 */
       refreshMarket(false);
+      ahTick();          /* 拍卖行：竞价与到期结算 */
       MGame.chatT++;
       if (MGame.chatT >= 12) { MGame.chatT = 0; MGame.pushChat(); MUI.dirty = true; }
       MGame.saveT++;

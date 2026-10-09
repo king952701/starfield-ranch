@@ -26,6 +26,10 @@ const UI = {
       case 'queue': queueAction(x, y, z === 'inf' ? -1 : parseInt(z || '1', 10)); break;
       case 'clearq': clearQueue(); break;
       case 'qdrop': S.queue.splice(parseInt(x, 10), 1); UI.dirty = true; break;
+      case 'qunlock': queueUnlock(); break;
+      case 'qpin': { const pi = parseInt(x, 10); if (pi > 0 && S.queue[pi]) { const mv = S.queue.splice(pi, 1)[0]; S.queue.unshift(mv); if (S.action) { S.action = null; tryStart(); } UI.dirty = true; } break; }
+      case 'qup': queueMove(parseInt(x, 10), -1); break;
+      case 'qdown': queueMove(parseInt(x, 10), 1); break;
       case 'combat-start':
         if (!S.combat || !S.combat.active) Combat.start(x); else Combat.stop();
         break;
@@ -50,6 +54,29 @@ const UI = {
       case 'bankcat': UI.bankCat = x; UI.dirty = true; break;
       case 'guild-join': UI.joinGuild(x); break;
       case 'guild-leave': S.guild = null; UI.dirty = true; break;
+      case 'lbcat': UI.lbCat = x; UI.dirty = true; break;
+    case 'privacy': UI.showPrivacy(); break;
+    case 'bu-export': {
+      const t = Backup.export();
+      if (!t) break;
+      if (Backup.copy(t)) { if (UI.toast) UI.toast('✅ 已复制到剪贴板'); }
+      else UI.buExpTxt = t;
+      UI.dirty = true;
+      break;
+    }
+    case 'bu-show': UI.buExpTxt = UI.buExpTxt ? '' : Backup.export(); UI.dirty = true; break;
+    case 'bu-import': UI.showBackup(); break;
+    case 'bu-snap': Backup.snapshot('手动'); UI.dirty = true; break;
+    case 'bu-restore': UI.buRestoreAsk = x; UI.dirty = true; break;
+    case 'bu-restore-cancel': UI.buRestoreAsk = -1; UI.dirty = true; break;
+    case 'bu-restore-ok': Backup.restoreSnap(+x); UI.buRestoreAsk = -1; UI.dirty = true; break;
+    case 'talent-pick': if (window.Talents) Talents.pick(x); UI.dirty = true; break;
+    case 'talent-reset': if (window.Talents) Talents.reset(); UI.dirty = true; break;
+    case 'tut-restart': Tutorial.restart(); break;
+    case 'tut-skip': Tutorial.skipAll(); break;
+    case 'tut-goto': UI.tab = x; UI.dirty = true; break;
+      case 'hero': if (x && heroOf(x)) { UI.heroId = x; UI.scrollTop && UI.scrollTop(); UI.dirty = true; } break;
+      case 'heroclose': UI.heroId = null; UI.dirty = true; break;
       case 'wipe': if (confirm('确定清空存档并重新开始？')) { wipeSave(); location.reload(); } break;
       case 'save': saveGame(); UI.toast('已保存'); break;
       case 'open-chest': UI.openChest(x); break;
@@ -158,7 +185,8 @@ const UI = {
     const t = [
       ['skill', '技能', '🧺'], ['combat', '战斗', '⚔️'], ['equip', '装备', '🛡️'],
       ['bank', '银行', '🎒'], ['mastery', '专精', '✦'], ['market', '市场', '🏪'],
-      ['task', '任务', '📜'], ['house', '牧场', '🏠'], ['social', '社交', '🌐'], ['stats', '统计', '📊']
+      ['task', '任务', '📜'], ['house', '牧场', '🏠'], ['social', '社交', '🌐'], ['talent', '天赋', '🌳'],
+      ['stats', '统计', '📊'], ['about', '关于', 'ℹ️']
     ];
     document.getElementById('tabs').innerHTML = t.map(function (x) {
       return '<div class="tab' + (UI.tab === x[0] ? ' on' : '') + '" data-act="tab" data-a="' + x[0] + '">' + x[2] + '<span>' + x[1] + '</span></div>';
@@ -266,6 +294,16 @@ const UI = {
         '<em>' + (q.n === -1 ? '∞' : '×' + q.n) + '</em></div>';
     });
     h += '</div>';
+    const nx = queueNextSlot();
+    h += '<div class="qcap">队列 ' + S.queue.length + ' / ' + queueSlots() + '</div>';
+    if (nx) {
+      let lackTxt = S.gold < nx.cost.gold ? '（金币不足）' : '';
+      for (const k in nx.cost.items) {
+        if (ITEMS[k] && count(k) < nx.cost.items[k]) lackTxt = '（材料不足）';
+      }
+      h += '<div class="qunlock" data-act="qunlock">🔓 解锁第 ' + nx.slot + ' 格 · 💰' +
+        fmt(nx.cost.gold) + lackTxt + '</div>';
+    }
     if (S.queue.length) h += '<div class="qclear" data-act="clearq">清空队列</div>';
     el.innerHTML = h;
   },
@@ -282,6 +320,11 @@ const UI = {
 
   /* ---------- 面板 ---------- */
   panel: function () {
+    const body = UI.panelBody();
+    /* 顶部引导目标条：模块缺失时静默为空 */
+    try { return ((window.Tutorial ? Tutorial.bar() : '') + body); } catch (e) { return body; }
+  },
+  panelBody: function () {
     switch (UI.tab) {
       case 'skill': return UI.pSkill();
       case 'combat': return UI.pCombat();
@@ -293,7 +336,105 @@ const UI = {
       case 'house': return UI.pHouse();
       case 'social': return UI.pSocial();
       case 'stats': return UI.pStats();
+      case 'talent': return UI.pTalent();
+      case 'about': return UI.pAbout();
     }
     return '';
+  },
+
+  /* ---------- 关于 / 美术资源致谢 ---------- */
+  pAbout: function () {
+    let h = '<div class="ph"><div class="phic">ℹ️</div><div class="phtxt">' +
+      '<h2>关于星海牧场</h2><p>🐄 银河牧场放置养成 · 单机离线可玩</p></div></div>';
+    h += '<p style="font-size:12px;line-height:1.8;margin-bottom:12px">' +
+      '《星海牧场》是一款以「养殖 → 加工 → 制造 → 交易」长产业链为核心的放置养成游戏。' +
+      '全部代码、数值设计与文本内容均为本项目原创撰写，未使用任何游戏引擎或第三方游戏素材。</p>';
+
+    const rows = [
+      ['界面', '全部由 CSS 手绘完成（渐变、边框与圆角），未使用任何背景贴图。'],
+      ['图标', '全部为 Unicode 表情字符（Emoji），以文字形式排入界面，不含图片文件，由<b>设备系统字体</b>现场渲染；Android 设备上通常来自 <b>Noto Emoji</b> 系列。'],
+      ['字体', '使用系统默认字体栈，项目内未打包任何字体文件。'],
+      ['音乐', '不含持续播放的背景音乐；升级与成就时的短旋律为 CC0 授权的 jingle。'],
+      ['Unicode 与 Emoji', '字符编码遵循 Unicode 标准；字形设计与版权归各自的字体项目及 Unicode 联盟所有。'],
+      ['Noto Emoji', 'Google 发布，字体部分采用 SIL Open Font License 1.1，图形部分采用 CC BY 4.0 授权。'],
+      ['技术栈', 'HTML + CSS + 原生 JavaScript，未接入任何统计、广告或支付 SDK。'],
+      ['隐私', '游戏进度仅保存在本机浏览器，不上传、不联网，不会收集任何个人信息。']
+    ];
+    h += '<h3 style="font-size:13px;color:var(--gold);margin:10px 0 6px">🎨 美术资源致谢</h3>';
+    h += '<div style="font-size:12px;line-height:1.9">' + rows.slice(0, 4).map(function (r) {
+      return '<div><b style="color:var(--gold)">' + r[0] + '</b>：' + r[1] + '</div>';
+    }).join('') + '</div>';
+    h += '<h3 style="font-size:13px;color:var(--gold);margin:12px 0 6px">📜 第三方许可与声明</h3>';
+    h += '<div style="font-size:12px;line-height:1.9">' + rows.slice(4).map(function (r) {
+      return '<div><b style="color:var(--gold)">' + r[0] + '</b>：' + r[1] + '</div>';
+    }).join('') + '</div>';
+    if (typeof CREDITS !== 'undefined' && CREDITS.length) {
+      h += '<h3 style="font-size:13px;color:var(--gold);margin:12px 0 6px">📦 第三方素材署名</h3>';
+      h += '<div style="font-size:12px;line-height:1.8">';
+      CREDITS.forEach(function (cd) {
+        h += '<div style="padding:5px 0;border-bottom:1px solid #1a2138">' +
+          '<div><b>' + cd.pkg + '</b> <span style="color:var(--dim)">[' + cd.lic + ']</span></div>' +
+          '<div style="color:var(--dim)">' + cd.use + '</div>' +
+          '<div style="color:var(--dim);font-size:11px">作者：' + cd.author + '　来源：' + cd.url + '</div>' +
+          '</div>';
+      });
+      h += '<div style="color:var(--dim);font-size:11px;margin-top:6px">' +
+        '以上素材均为 Creative Commons CC0 1.0（公有领域奉献），允许个人、教育与商业用途；' +
+        '署名非强制，本项目主动列出以示尊重。完整许可原文见 media/THIRD-PARTY-LICENSES.txt。</div>';
+      h += '</div>';
+    }
+    if (window.Tutorial) {
+      const tS = Tutorial.ready();
+      const stTxt = tS.skip ? '已跳过' : (tS.step >= Tutorial.steps.length ? '已全部完成' : ('进行中 ' + tS.step + '/' + Tutorial.steps.length));
+      h += '<h3 style="font-size:13px;color:var(--gold);margin:12px 0 6px">🎯 新人引导</h3>';
+      h += '<p style="font-size:12px">状态：' + stTxt + '　' +
+        '<button class="mini" data-act="tut-restart">重来一次</button> ' +
+        '<button class="mini" data-act="tut-skip">跳过</button></p>';
+    }
+    if (window.Backup) {
+      const nm = String(S.name || '').replace(/[<>&]/g, '');
+      const kB = Math.max(1, Math.round(Backup.exportSize() / 1024));
+      h += '<h3 style="font-size:13px;color:var(--gold);margin:12px 0 6px">💾 存档备份</h3>';
+      h += '<p style="font-size:12px;line-height:1.8">当前进度：' + nm + ' ｜ 总等级 <b style="color:var(--gold)">' +
+        totalLevel() + '</b> ｜ ' + fmt(S.gold) + ' 金币（导出约 ' + kB + ' KB）<br>' +
+        '<button class="mini" data-act="bu-export" style="margin-top:6px">复制到剪贴板</button> ' +
+        '<button class="mini" data-act="bu-show">' + (UI.buExpTxt ? '收起文本' : '显示为文本') + '</button> ' +
+        '<button class="mini" data-act="bu-import">从文本导入</button> ' +
+        '<button class="mini" data-act="bu-snap">立即备份一份</button></p>';
+      if (UI.buExpTxt) {
+        h += '<textarea readonly style="width:100%;height:120px;background:#080d1c;color:#b8c2e0;' +
+          'border:1px solid #232c50;border-radius:8px;padding:8px;font-size:11px;box-sizing:border-box;' +
+          'word-break:break-all">' + String(UI.buExpTxt).replace(/</g, '&lt;') + '</textarea>';
+      }
+      const snaps = Backup.listSnaps();
+      h += '<p style="font-size:12px;line-height:1.8;margin-top:6px">本机快照：' +
+        (snaps.length ? '' : '暂无（快照保存在应用内，卸载会一并清除）') + '</p>';
+      snaps.forEach(function (sp) {
+        const nm2 = String(sp.nm || '').replace(/[<>&]/g, '');
+        h += '<p style="font-size:12px">' + Backup.fmtDays(sp.t) + ' ｜ ' + nm2 + ' 等级' + sp.lv +
+          (sp.tag ? '（' + sp.tag + '）' : '') + '　' +
+          (UI.buRestoreAsk === sp.i
+            ? '<button class="mini" data-act="bu-restore-ok" data-a="' + sp.i + '">确认回滚</button>' +
+            '<button class="mini" data-act="bu-restore-cancel">取消</button>'
+            : '<button class="mini" data-act="bu-restore" data-a="' + sp.i + '">回滚到此</button>') +
+          '</p>';
+      });
+      h += '<p style="font-size:11px;color:var(--dim)">卸载或清除应用数据会删除全部进度，' +
+        '导出文本是唯一可跨设备迁移的方式；若开启了系统云备份，进度也可能随备份保存（见隐私政策第 4 条）。</p>';
+    }
+    if (typeof PRIVACY !== 'undefined') {
+      h += '<h3 style="font-size:13px;color:var(--gold);margin:12px 0 6px">🔒 隐私政策</h3>';
+      h += '<p style="font-size:12px;line-height:1.8">v' + PRIVACY.ver + '（更新于 ' + PRIVACY.updated + '）　' +
+        '<span data-act="privacy" style="cursor:pointer;color:var(--gold);text-decoration:underline">阅读完整政策</span>' +
+        '<br>纯离线单机：不联网、不收集、不上传个人信息。</p>';
+    }
+    h += '<h3 style="font-size:13px;color:var(--gold);margin:12px 0 6px">⚖️ 原创声明</h3>';
+    h += '<p style="font-size:12px;line-height:1.8">' +
+      '本作的人物设定、物品名称、技能与战斗数值、任务与世界频道文本均为独立创作。' +
+      '若您认为本作内容侵犯了您的合法权益，烦请通过发布页面留言与我们联系并提供权属证明，' +
+      '我们会在核实后第一时间处理。</p>';
+    h += '<p style="text-align:center;color:var(--dim);font-size:12px;margin-top:14px">' +
+      '🌌 感谢每一位来到星海牧场的牧牛人<br>愿你的仓库堆满银河奶，强化一路 +10</p>';
+    return h;
   }
 };
